@@ -24,8 +24,6 @@ pub struct Graph {
 
 pub type GraphBuilder = Vec<u8>;
 
-pub type GraphBuilderArray = Vec<GraphBuilder>;
-
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GraphEncoding {
     pub encoding: u8,
@@ -34,22 +32,34 @@ pub struct GraphEncoding {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GuestError {
     #[serde(rename = "modelError")]
-    #[serde(default)]
-    pub model_error: String,
+    pub model_error: u8,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct LoadInput {
-    pub builder: GraphBuilderArray,
+    pub builder: GraphBuilder,
     pub encoding: GraphEncoding,
     pub target: ExecutionTarget,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct LoadResult {
+    pub graph: Graph,
+    #[serde(rename = "guestError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest_error: Option<GuestError>,
+    #[serde(rename = "hasError")]
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(rename = "runtimeError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_error: Option<RuntimeError>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeError {
     #[serde(rename = "runtimeError")]
-    #[serde(default)]
-    pub runtime_error: String,
+    pub runtime_error: u8,
 }
 
 /// The Mlinference service
@@ -65,7 +75,7 @@ pub trait Mlinference {
     /// Calculates the factorial (n!) of the input parameter
     async fn calculate(&self, ctx: &Context, arg: &u32) -> RpcResult<u64>;
     /// load
-    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<Graph>;
+    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -189,7 +199,7 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
     }
     #[allow(unused)]
     /// load
-    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<Graph> {
+    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> {
         let buf = serialize(arg)?;
         let resp = self
             .transport

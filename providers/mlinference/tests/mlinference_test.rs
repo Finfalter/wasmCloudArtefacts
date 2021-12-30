@@ -9,10 +9,19 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
+// In case of problems define the following
+// export WASMCLOUD_OCI_ALLOWED_INSECURE=*
+
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
-    let res = run_selected_spawn!(&opts, health_check, factorial_0_1, factorial_more, load_01);
+    let res = run_selected_spawn!(
+        &opts, 
+        health_check, 
+        load_basics, 
+        load_multiple_graphs,
+        load_unsupported_encoding);
+
     print_test_results(&res);
 
     let passed = res.iter().filter(|tr| tr.passed).count();
@@ -31,35 +40,6 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     // health check
     let hc = prov.health_check().await;
     check!(hc.is_ok())?;
-    Ok(())
-}
-
-/// tests of the Mlinference capability
-async fn load_01(_opt: &TestOptions) -> RpcResult<()> {
-    let prov = test_provider().await;
-
-    // create client and ctx
-    let client = MlinferenceSender::via(prov);
-    let ctx = Context::default();
-
-    let g1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
-    let g2: GraphBuilder = vec![0xb1, 0xb2, 0xb3];
-
-    let ga: GraphBuilderArray = vec![g1, g2];
-
-    let ge: GraphEncoding = GraphEncoding { encoding: Some(0) };
-
-    let et: ExecutionTarget = ExecutionTarget { target: Some(0)};
-
-    let load = LoadInput {
-        builder: ga,
-        encoding: ge,
-        target: et,
-    };
-
-    let resp = client.load(&ctx, &load).await?;
-    assert_eq!(resp.graph, Some(42), "should be: 42");
-
     Ok(())
 }
 
@@ -96,6 +76,96 @@ async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
 
     let resp = client.calculate(&ctx, &4).await?;
     assert_eq!(resp, 24, "4!");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability
+async fn load_basics(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // create client and ctx
+    let client = MlinferenceSender::via(prov);
+    let ctx = Context::default();
+
+    let gb1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
+    let _gb2: GraphBuilder = vec![0xa2, 0xa3, 0xa4];
+    let _gb3: GraphBuilder = vec![0xa3, 0xa4, 0xa5];
+
+    let ge: GraphEncoding = GraphEncoding { encoding: 1 };
+
+    let et: ExecutionTarget = ExecutionTarget { target: 0 };
+
+    let load = LoadInput {
+        builder: gb1,
+        encoding: ge,
+        target: et,
+    };
+
+    let resp = client.load(&ctx, &load).await?;
+
+    assert_eq!(resp.has_error, false, "should be: 'false'");
+    assert_eq!(resp.guest_error, None, "should be 'None'");
+    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.graph, Graph{graph: 0}, "should be: 0");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability
+async fn load_multiple_graphs(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // create client and ctx
+    let client = MlinferenceSender::via(prov);
+    let ctx = Context::default();
+
+    let gb1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
+    let gb2: GraphBuilder = vec![0xa2, 0xa3, 0xa4];
+    let gb3: GraphBuilder = vec![0xa3, 0xa4, 0xa5];
+
+    let ge: GraphEncoding = GraphEncoding { encoding: 1 };
+    let et: ExecutionTarget = ExecutionTarget { target: 0 };
+
+    let load = LoadInput { builder: gb1, encoding: ge.clone(), target: et.clone()};
+    let resp = client.load(&ctx, &load).await?;
+    assert_eq!(resp.graph, Graph{graph: 1}, "should be: 1");
+
+    let load = LoadInput { builder: gb2, encoding: ge.clone(), target: et.clone()};
+    let resp = client.load(&ctx, &load).await?;
+    assert_eq!(resp.graph, Graph{graph: 2}, "should be: 2");
+
+    let load = LoadInput { builder: gb3, encoding: ge, target: et};
+    let resp = client.load(&ctx, &load).await?;
+
+    assert_eq!(resp.has_error, false, "should be: 'false'");
+    assert_eq!(resp.guest_error, None, "should be 'None'");
+    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.graph, Graph{graph: 3}, "should be: 3");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability
+async fn load_unsupported_encoding(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // create client and ctx
+    let client = MlinferenceSender::via(prov);
+    let ctx = Context::default();
+
+    let gb: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
+
+    let ge: GraphEncoding = GraphEncoding     { encoding: 0 }; // 0 := OPENVINO which is currently not supported
+    let et: ExecutionTarget = ExecutionTarget { target: 0 };
+
+    let load = LoadInput { builder: gb, encoding: ge.clone(), target: et.clone()};
+    let resp = client.load(&ctx, &load).await?;
+
+    assert_eq!(resp.has_error, true, "should be: 'true'");
+    assert_eq!(resp.guest_error, Some(GuestError{ model_error: 1}), "should be: 1, corresponding to InvalidEncodingError");
+    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.graph, Graph{graph: std::u32::MAX}, "should be: u32::MAX");
 
     Ok(())
 }

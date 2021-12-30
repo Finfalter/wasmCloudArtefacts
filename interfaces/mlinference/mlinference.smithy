@@ -30,13 +30,12 @@ operation Calculate {
 /// load
 operation Load {
   input: LoadInput,
-  output: Graph,
-  errors: [MlInferenceError]
+  output: LoadResult
 }
 
 structure LoadInput {
     @required
-    builder: GraphBuilderArray,
+    builder: GraphBuilder,
 
     @required
     encoding: GraphEncoding,
@@ -45,9 +44,9 @@ structure LoadInput {
     target: ExecutionTarget
 }
 
-list GraphBuilderArray {
-  member: GraphBuilder
-}
+// list GraphBuilderArray {
+//   member: GraphBuilder
+// }
 
 list GraphBuilder {
   member: U8
@@ -58,13 +57,13 @@ structure GraphEncoding {
   @enum([
     {
         value: 0,
-        name: "GRAPH_ENCODING_OPENVINO",
+        name: "OPENVINO",
         documentation: """TBD""",
         tags: ["graphEncoding"]
     },
     {
         value: 1,
-        name: "GRAPH_ENCODING_ONNX",
+        name: "ONNX",
         documentation: """TBD""",
         tags: ["graphEncoding"]
     }
@@ -104,13 +103,6 @@ structure Graph {
   graph: U32
 }
 
-/// corresponds to `enum WasiNnError`
-union MlInferenceError {
-    actorError: GuestError,
-
-    runtimeError: RuntimeError,
-}
-
 @error("client")
 structure GuestError {
   // enum seems to have no impact on the code generator
@@ -129,7 +121,7 @@ structure GuestError {
     },
   ])
   @required
-  modelError: String
+  modelError: U8
 }
 
 @error("server")
@@ -149,12 +141,23 @@ structure RuntimeError {
       tags: ["MlInferenceError"]
     },
     {
-      value: 1,
+      value: 2,
       name: "ONNX_ERROR",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
   ])
   @required
-  runtimeError: String
+  runtimeError: U8
+}
+
+structure LoadResult {
+  hasError: Boolean,
+
+  runtimeError: RuntimeError,
+
+  guestError: GuestError,
+
+  @required
+  graph: Graph,
 }

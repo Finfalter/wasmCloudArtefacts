@@ -10,6 +10,7 @@ log = "0.4"
 #wasmcloud-interface-factorial = "0.3"
 wasmcloud_interface_mlinference = { path="../../interfaces/mlinference/rust" }
 wasmbus-rpc = "0.6"
+serde = { version = "1.0" , features = ["derive"] }
 
 # test dependencies
 [dev-dependencies]

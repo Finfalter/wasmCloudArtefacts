@@ -1,22 +1,26 @@
 [package]
-name = "mlinference"
-version = "0.1.0"
-edition = "2021"
-resolver = "2"
+    name = "mlinference"
+    version = "0.1.0"
+    edition = "2021"
+    resolver = "2"
 
 [dependencies]
-async-trait = "0.1"
-log = "0.4"
-#wasmcloud-interface-factorial = "0.3"
-wasmcloud_interface_mlinference = { path="../../interfaces/mlinference/rust" }
-wasmbus-rpc = "0.6"
-serde = { version = "1.0" , features = ["derive"] }
+    async-trait = "0.1"
+    log = "0.4"
+    #wasmcloud-interface-factorial = "0.3"
+    wasmcloud_interface_mlinference = { path="../../interfaces/mlinference/rust" }
+    wasmbus-rpc = "0.6"
+    serde = { version = "1.0" , features = ["derive"] }
+    ndarray           = "0.15"
+    tract-data        = "0.15.8"
+    tract-linalg      = "0.15.8"
+    tract-onnx        = { version = "0.15.8" }
 
 # test dependencies
 [dev-dependencies]
-wasmcloud-test-util = "0.1"
-tokio = { version = "1.0", features = [ "full" ] }
+    wasmcloud-test-util = "0.1"
+    tokio = { version = "1.0", features = [ "full" ] }
 
 [[bin]]
-name = "mlinference"
-path = "src/main.rs"
+    name = "mlinference"
+    path = "src/main.rs"

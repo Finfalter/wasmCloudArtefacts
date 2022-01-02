@@ -2,17 +2,24 @@
 //!
 
 //use tract::{State};
-mod tract;
+mod utils;
 
-use tract::{GraphWrap, GraphEncoding, GuestErrorWrap};
+use utils::{GraphWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, TractSession, State};
 
 use std::{
-    collections::{btree_map::Keys, BTreeMap},
     sync::{Arc, RwLock},
+    io::Cursor,
 };
 use log::{debug, info, error};
 use wasmbus_rpc::provider::prelude::*;
-use wasmcloud_interface_mlinference::{Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError};
+use wasmcloud_interface_mlinference::{
+    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError, RuntimeError, GraphExecutionContext, IecResult
+};
+
+//use ndarray::Array;
+//use tract_onnx::prelude::Tensor as TractTensor;
+    use tract_onnx::prelude::*;
+//use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
 
 // main (via provider_main) initializes the threaded tokio executor,
 // listens to lattice rpcs, handles actor links,
@@ -25,24 +32,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[derive(Default)]
-pub struct State {
-    //pub executions: BTreeMap<GraphExecutionContext, TractSession>,
-    pub models: BTreeMap<GraphWrap, Vec<u8>>,
-}
+// #[derive(Default)]
+// pub struct State {
+//     pub executions: BTreeMap<GraphExecutionContext, TractSession>,
+//     pub models: BTreeMap<GraphWrap, Vec<u8>>,
+// }
 
-impl State {
-    /// Helper function that returns the key that is supposed to be inserted next.
-    pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
-        match keys.last() {
-            Some(&k) => {
-                let last: u32 = k.into();
-                K::from(last + 1)
-            }
-            None => K::from(0),
-        }
-    }
-}
+// impl State {
+//     /// Helper function that returns the key that is supposed to be inserted next.
+//     pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
+//         match keys.last() {
+//             Some(&k) => {
+//                 let last: u32 = k.into();
+//                 K::from(last + 1)
+//             }
+//             None => K::from(0),
+//         }
+//     }
+// }
 
 // #[derive(Debug)]
 // pub struct TractSession {
@@ -96,6 +103,7 @@ impl Mlinference for MlinferenceProvider {
 
         let model_bytes = builder.to_vec();
 
+        // TOD0: should not panic in case the lock is not available
         let mut state = self.state.write().unwrap();
         
         let graph_handle = state.key(state.models.keys());
@@ -115,6 +123,68 @@ impl Mlinference for MlinferenceProvider {
         };
 
         info!("load() - current number of models: {:#?}", state.models.len());
+
+        Ok(result_ok)
+    }
+
+    /// init_execution_context
+    async fn init_execution_context(
+        &self,
+        _ctx: &Context,
+        arg: &Graph,
+    ) -> RpcResult<IecResult> {
+        let graph = GraphWrap::from(arg.graph);
+
+        info!("init_execution_context: graph: {:#?}", graph);
+
+        // TOD0: should not panic in case the lock is not available
+        let mut state = self.state.write().unwrap();
+        let mut model_bytes = match state.models.get(&graph) {
+            Some(mb) => Cursor::new(mb),
+            None => {
+                error!("init_execution_context: cannot find model in state with graph {:#?}", graph);
+
+                let result_with_error = IecResult {
+                    has_error: true,
+                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
+                    guest_error: None, 
+                    gec: GraphExecutionContext{gec: std::u32::MAX},
+                };
+                
+                return Ok(result_with_error);
+            }
+        };
+
+        let model = match tract_onnx::onnx().model_for_read(&mut model_bytes) 
+        {
+            Ok (v) => v,
+        
+            Err(e)=> {
+                error!("init_execution_context() - problems with reading given model: {:#?}", e);
+
+                let result_with_error = IecResult {
+                    has_error: true,
+                    runtime_error: None,
+                    guest_error: Some(GuestError::from(GuestErrorWrap::ModelError)), 
+                    gec: GraphExecutionContext{gec: std::u32::MAX},
+                };
+                return Ok::<IecResult, wasmbus_rpc::RpcError>(result_with_error);
+            }
+        };
+
+        let gec = state.key(state.executions.keys());
+        info!("init_execution_context: inserting graph execution context: {:#?}", gec);
+
+        state
+            .executions
+            .insert(gec, TractSession::with_graph(model));
+
+        let result_ok = IecResult {
+            has_error: false,
+            runtime_error: None,
+            guest_error: None,
+            gec: GraphExecutionContext::from(gec),
+        };
 
         Ok(result_ok)
     }

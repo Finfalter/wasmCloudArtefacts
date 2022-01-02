@@ -1,3 +1,6 @@
+mod model;
+use model::SINE_MODEL;
+
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::*;
 use wasmcloud_test_util::{
@@ -12,6 +15,8 @@ use wasmcloud_test_util::{run_selected, run_selected_spawn};
 // In case of problems define the following
 // export WASMCLOUD_OCI_ALLOWED_INSECURE=*
 
+const IDENTITY_MODEL_PATH: &str = "tests/identity_input_output.onnx";
+
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
@@ -20,7 +25,9 @@ async fn run_all() {
         health_check, 
         load_basics, 
         load_multiple_graphs,
-        load_unsupported_encoding);
+        load_unsupported_encoding,
+        init_execution_context_invalid_model,
+        init_execution_context_valid_model);
 
     print_test_results(&res);
 
@@ -88,7 +95,9 @@ async fn load_basics(_opt: &TestOptions) -> RpcResult<()> {
     let client = MlinferenceSender::via(prov);
     let ctx = Context::default();
 
-    let gb1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
+    //let gb1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
+    //let gb1: GraphBuilder = SINE_MODEL.to_vec();
+    let gb1 = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
     let _gb2: GraphBuilder = vec![0xa2, 0xa3, 0xa4];
     let _gb3: GraphBuilder = vec![0xa3, 0xa4, 0xa5];
 
@@ -165,7 +174,43 @@ async fn load_unsupported_encoding(_opt: &TestOptions) -> RpcResult<()> {
     assert_eq!(resp.has_error, true, "should be: 'true'");
     assert_eq!(resp.guest_error, Some(GuestError{ model_error: 1}), "should be: 1, corresponding to InvalidEncodingError");
     assert_eq!(resp.runtime_error, None, "should be 'None'");
-    assert_eq!(resp.graph, Graph{graph: std::u32::MAX}, "should be: u32::MAX");
+    assert_eq!(resp.graph, Graph{graph: std::u32::MAX}, "should be u32::MAX");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability - init_execution_context()
+async fn init_execution_context_invalid_model(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // create client and ctx
+    let client = MlinferenceSender::via(prov);
+    let ctx = Context::default();
+
+    let resp = client.init_execution_context(&ctx, &Graph{graph: 1}).await?;
+
+    assert_eq!(resp.has_error, true, "should be: 'true'");
+    assert_eq!(resp.guest_error, Some(GuestError{model_error: 0}), "should be '0' for 'ModelError'");
+    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.gec, GraphExecutionContext{gec: std::u32::MAX}, "should be u32::MAX");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability - init_execution_context()
+async fn init_execution_context_valid_model(_opt: &TestOptions) -> RpcResult<()> {
+    let prov = test_provider().await;
+
+    // create client and ctx
+    let client = MlinferenceSender::via(prov);
+    let ctx = Context::default();
+
+    let resp = client.init_execution_context(&ctx, &Graph{graph: 0}).await?;
+
+    assert_eq!(resp.has_error, false, "should be: 'false'");
+    assert_eq!(resp.guest_error, None, "should be '0' for 'None'");
+    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.gec, GraphExecutionContext{gec: 0}, "should be '0'");
 
     Ok(())
 }

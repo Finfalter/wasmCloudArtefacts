@@ -18,7 +18,7 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Calculate, Load ]
+  operations: [ Calculate, Load, InitExecutionContext ]
 }
 
 /// Calculates the factorial (n!) of the input parameter
@@ -31,6 +31,12 @@ operation Calculate {
 operation Load {
   input: LoadInput,
   output: LoadResult
+}
+
+/// init_execution_context
+operation InitExecutionContext {
+  input: Graph,
+  output: IecResult
 }
 
 structure LoadInput {
@@ -160,4 +166,21 @@ structure LoadResult {
 
   @required
   graph: Graph,
+}
+
+/// InitExecutionContextResult
+structure IecResult {
+  hasError: Boolean,
+
+  runtimeError: RuntimeError,
+
+  guestError: GuestError,
+
+  @required
+  gec: GraphExecutionContext,
+}
+
+structure GraphExecutionContext {
+  @required
+  gec: U32
 }

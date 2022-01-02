@@ -30,9 +30,29 @@ pub struct GraphEncoding {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GraphExecutionContext {
+    pub gec: u32,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GuestError {
     #[serde(rename = "modelError")]
     pub model_error: u8,
+}
+
+/// InitExecutionContextResult
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct IecResult {
+    pub gec: GraphExecutionContext,
+    #[serde(rename = "guestError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest_error: Option<GuestError>,
+    #[serde(rename = "hasError")]
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(rename = "runtimeError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_error: Option<RuntimeError>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -76,6 +96,8 @@ pub trait Mlinference {
     async fn calculate(&self, ctx: &Context, arg: &u32) -> RpcResult<u64>;
     /// load
     async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult>;
+    /// init_execution_context
+    async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -102,6 +124,16 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
                 let buf = serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.Load",
+                    arg: Cow::Owned(buf),
+                })
+            }
+            "InitExecutionContext" => {
+                let value: Graph = deserialize(message.arg.as_ref())
+                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
+                let resp = Mlinference::init_execution_context(self, ctx, &value).await?;
+                let buf = serialize(&resp)?;
+                Ok(Message {
+                    method: "Mlinference.InitExecutionContext",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -214,6 +246,26 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             .await?;
         let value = deserialize(&resp)
             .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Load", e)))?;
+        Ok(value)
+    }
+    #[allow(unused)]
+    /// init_execution_context
+    async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult> {
+        let buf = serialize(arg)?;
+        let resp = self
+            .transport
+            .send(
+                ctx,
+                Message {
+                    method: "Mlinference.InitExecutionContext",
+                    arg: Cow::Borrowed(&buf),
+                },
+                None,
+            )
+            .await?;
+        let value = deserialize(&resp).map_err(|e| {
+            RpcError::Deser(format!("response to {}: {}", "InitExecutionContext", e))
+        })?;
         Ok(value)
     }
 }

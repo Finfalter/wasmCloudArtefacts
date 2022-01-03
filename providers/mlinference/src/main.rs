@@ -1,10 +1,9 @@
 //! mlinference capability provider
 //!
-
-//use tract::{State};
 mod utils;
 
-use utils::{GraphWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, TractSession, State};
+use utils::{GraphWrap, GECWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, 
+    TractSession, State, bytes_to_f32_vec};
 
 use std::{
     sync::{Arc, RwLock},
@@ -13,13 +12,13 @@ use std::{
 use log::{debug, info, error};
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::{
-    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError, RuntimeError, GraphExecutionContext, IecResult
+    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError, 
+    RuntimeError, GraphExecutionContext, IecResult, SetInputStruct, SetInputResult
 };
 
-//use ndarray::Array;
-//use tract_onnx::prelude::Tensor as TractTensor;
-    use tract_onnx::prelude::*;
-//use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
+use ndarray::Array;
+use tract_onnx::prelude::Tensor as TractTensor;
+use tract_onnx::prelude::*;
 
 // main (via provider_main) initializes the threaded tokio executor,
 // listens to lattice rpcs, handles actor links,
@@ -184,6 +183,97 @@ impl Mlinference for MlinferenceProvider {
             runtime_error: None,
             guest_error: None,
             gec: GraphExecutionContext::from(gec),
+        };
+
+        Ok(result_ok)
+    }
+
+    /// SetInput
+    /// If there are multiple input tensors, the guest
+    /// should call this function in order, as this actually
+    /// constructs the final input tensor used for the inference.
+    /// If we wanted to avoid this, we could create an intermediary
+    /// HashMap<u32, Array<TIn, D>> and collapse it into a Vec<Array<TIn, D>>
+    /// when performing the inference.
+    async fn set_input(&self, _ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult> {
+        let mut state = self.state.write().unwrap();
+
+        let gec_wrap = GECWrap::from(arg.context.gec);
+        let index: u32 = match arg.index {
+            Some(v) => v,
+            None => 0,
+        };
+        let tensor = &arg.tensor;
+
+        let execution = match state.executions.get_mut(&gec_wrap) {
+            Some(s) => s,
+            None => {
+                error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
+
+                let result_with_error = SetInputResult {
+                    has_error: true,
+                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::ContextNotFound)),
+                    guest_error: None
+                };
+
+                return Ok(result_with_error);
+            }
+        };
+
+        let shape = tensor
+        .dimensions
+        .iter()
+        .map(|d| *d as usize)
+        .collect::<Vec<_>>();
+
+        match execution.graph.set_input_fact(
+        index as usize,
+        InferenceFact::dt_shape(f32::datum_type(), shape.clone()),) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("set_input() - cannot set input fact {:#?}", e);
+
+                let result_with_error = SetInputResult {
+                    has_error: true,
+                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
+                    guest_error: None,
+                };
+                return Ok(result_with_error);
+            }
+        };
+        
+        let data = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
+        let input: TractTensor = match Array::from_shape_vec(shape, data){
+            Ok(s) => s.into(),
+            Err(e) => {
+                error!("set_input() - corrupt tensor input {:#?}", e);
+
+                let result_with_error = SetInputResult {
+                    has_error: true,
+                    runtime_error: None,
+                    guest_error: Some(GuestError::from(GuestErrorWrap::CorruptInputTensor))
+                };
+                return Ok(result_with_error);
+            }
+        };
+
+        match execution.input_tensors {
+            Some(ref mut input_arrays) => {
+                input_arrays.push(input);
+                log::info!(
+                    "set_input: input arrays now contains {} items",
+                    input_arrays.len(),
+                );
+            }
+            None => {
+                execution.input_tensors = Some(vec![input]);
+            }
+        };
+
+        let result_ok = SetInputResult {
+            has_error: false,
+            runtime_error: None,
+            guest_error: None
         };
 
         Ok(result_ok)

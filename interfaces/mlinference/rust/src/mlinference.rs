@@ -22,6 +22,7 @@ pub struct Graph {
     pub graph: u32,
 }
 
+/// see LoadInput
 pub type GraphBuilder = Vec<u8>;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -82,6 +83,44 @@ pub struct RuntimeError {
     pub runtime_error: u8,
 }
 
+/// SetInputResult
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SetInputResult {
+    #[serde(rename = "guestError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest_error: Option<GuestError>,
+    #[serde(rename = "hasError")]
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(rename = "runtimeError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_error: Option<RuntimeError>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SetInputStruct {
+    pub context: GraphExecutionContext,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
+    pub tensor: Tensor,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Tensor {
+    pub data: TensorData,
+    pub dimensions: TensorDimensions,
+    pub ttype: TensorType,
+}
+
+pub type TensorData = Vec<u8>;
+
+pub type TensorDimensions = Vec<u32>;
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TensorType {
+    pub ttype: u8,
+}
+
 /// The Mlinference service
 /// wasmbus.contractId: example:interfaces:mlinference
 /// wasmbus.providerReceive
@@ -98,6 +137,8 @@ pub trait Mlinference {
     async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult>;
     /// init_execution_context
     async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult>;
+    /// set_input
+    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -134,6 +175,16 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
                 let buf = serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.InitExecutionContext",
+                    arg: Cow::Owned(buf),
+                })
+            }
+            "SetInput" => {
+                let value: SetInputStruct = deserialize(message.arg.as_ref())
+                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
+                let resp = Mlinference::set_input(self, ctx, &value).await?;
+                let buf = serialize(&resp)?;
+                Ok(Message {
+                    method: "Mlinference.SetInput",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -266,6 +317,25 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
         let value = deserialize(&resp).map_err(|e| {
             RpcError::Deser(format!("response to {}: {}", "InitExecutionContext", e))
         })?;
+        Ok(value)
+    }
+    #[allow(unused)]
+    /// set_input
+    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult> {
+        let buf = serialize(arg)?;
+        let resp = self
+            .transport
+            .send(
+                ctx,
+                Message {
+                    method: "Mlinference.SetInput",
+                    arg: Cow::Borrowed(&buf),
+                },
+                None,
+            )
+            .await?;
+        let value = deserialize(&resp)
+            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "SetInput", e)))?;
         Ok(value)
     }
 }

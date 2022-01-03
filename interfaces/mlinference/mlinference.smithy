@@ -18,7 +18,7 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Calculate, Load, InitExecutionContext ]
+  operations: [ Calculate, Load, InitExecutionContext, SetInput ]
 }
 
 /// Calculates the factorial (n!) of the input parameter
@@ -39,6 +39,73 @@ operation InitExecutionContext {
   output: IecResult
 }
 
+/// set_input
+operation SetInput {
+  input: SetInputStruct,
+  output: SetInputResult
+}
+
+structure SetInputStruct {
+    @required
+    context: GraphExecutionContext,
+
+    index: U32,
+
+    @required
+    tensor: Tensor
+}
+
+structure Tensor {
+    @required
+    dimensions: TensorDimensions,
+
+    @required
+    ttype: TensorType,
+
+    @required
+    data: TensorData
+}
+
+list TensorDimensions {
+  member: U32
+}
+
+structure TensorType {
+  // enum seems to have no impact on the code generator
+  @enum([
+    {
+      value: 0,
+      name: "TENSOR_TYPE_F16",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 1,
+      name: "TENSOR_TYPE_F32",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 2,
+      name: "TENSOR_TYPE_U8",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 3,
+      name: "TENSOR_TYPE_I32",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    }
+  ])
+  @required
+  ttype: U8
+}
+
+list TensorData {
+  member: U8
+}
+
 structure LoadInput {
     @required
     builder: GraphBuilder,
@@ -50,10 +117,7 @@ structure LoadInput {
     target: ExecutionTarget
 }
 
-// list GraphBuilderArray {
-//   member: GraphBuilder
-// }
-
+/// see LoadInput
 list GraphBuilder {
   member: U8
 }
@@ -158,6 +222,7 @@ structure RuntimeError {
 }
 
 structure LoadResult {
+  @required
   hasError: Boolean,
 
   runtimeError: RuntimeError,
@@ -170,6 +235,7 @@ structure LoadResult {
 
 /// InitExecutionContextResult
 structure IecResult {
+  @required
   hasError: Boolean,
 
   runtimeError: RuntimeError,
@@ -183,4 +249,14 @@ structure IecResult {
 structure GraphExecutionContext {
   @required
   gec: U32
+}
+
+/// SetInputResult
+structure SetInputResult {
+  @required
+  hasError: Boolean,
+
+  runtimeError: RuntimeError,
+
+  guestError: GuestError
 }

@@ -1,20 +1,30 @@
 use std::{
     collections::{btree_map::Keys, BTreeMap},
     cmp::Ordering,
-    sync::Arc
+    sync::Arc,
 };
 use serde::{Deserialize, Serialize};
 use wasmcloud_interface_mlinference::{Graph, GuestError, RuntimeError, GraphExecutionContext};
-//use ndarray::Array;
+
 use tract_onnx::prelude::*;
 use tract_onnx::prelude::Tensor as TractTensor;
 use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
+
+use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::Cursor;
+
+// #[allow(dead_code)]
+// pub enum ErrorWrap {
+//     RuntimeErrorWrap,
+//     GuestErrorWrap,
+// }
 
 #[allow(dead_code)]
 pub enum RuntimeErrorWrap {
     RuntimeError = 0,
     OpenVinoError = 1,
     OnnxError = 2,
+    ContextNotFound = 3,
 }
 
 impl From<RuntimeErrorWrap> for RuntimeError {
@@ -23,6 +33,7 @@ impl From<RuntimeErrorWrap> for RuntimeError {
             RuntimeErrorWrap::RuntimeError => RuntimeError{runtime_error: 0},
             RuntimeErrorWrap::OpenVinoError => RuntimeError{runtime_error: 1},
             RuntimeErrorWrap::OnnxError => RuntimeError{runtime_error: 2},
+            RuntimeErrorWrap::ContextNotFound => RuntimeError{runtime_error: 3},
         }
     }
 }
@@ -30,7 +41,8 @@ impl From<RuntimeErrorWrap> for RuntimeError {
 #[allow(dead_code)]
 pub enum GuestErrorWrap {
     ModelError = 0,
-    InvalidEncodingError = 1
+    InvalidEncodingError = 1,
+    CorruptInputTensor = 2,
 }
 
 impl From<GuestErrorWrap> for GuestError {
@@ -38,6 +50,7 @@ impl From<GuestErrorWrap> for GuestError {
         match gew {
             GuestErrorWrap::ModelError => GuestError{model_error: 0},
             GuestErrorWrap::InvalidEncodingError => GuestError{model_error: 1},
+            GuestErrorWrap::CorruptInputTensor => GuestError{model_error: 2},
         }
     }
 }
@@ -175,4 +188,19 @@ impl TractSession {
             output_tensors: None,
         }
     }
+}
+
+pub type Result<T> = std::io::Result<T>;
+
+pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+    let chunks: Vec<&[u8]> = data.chunks(4).collect();
+    let v: Vec<Result<f32>> = chunks
+        .into_iter()
+        .map(|c| {
+            let mut rdr = Cursor::new(c);
+            Ok(rdr.read_f32::<LittleEndian>()?)
+        })
+        .collect();
+
+    v.into_iter().collect()
 }

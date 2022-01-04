@@ -87,7 +87,7 @@ impl Mlinference for MlinferenceProvider {
 
         info!("load() - encoding: {:#?}, target: {:#?}", encoding, target);
 
-        if encoding.encoding != GraphEncoding::ONNX {
+        if encoding.encoding != GraphEncoding::GRAPH_ENCODING_ONNX {
             error!("load() - current implementation can only load ONNX models");
 
             let result_with_error = LoadResult {

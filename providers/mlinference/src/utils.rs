@@ -57,16 +57,18 @@ impl From<GuestErrorWrap> for GuestError {
 
 #[non_exhaustive]
 #[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub struct GraphEncoding;
 
 #[allow(dead_code)]
 impl GraphEncoding {
-    pub const OPENVINO: u8 = 0;
-    pub const ONNX:     u8 = 1;
+    pub const GRAPH_ENCODING_OPENVINO: u8 = 0;
+    pub const GRAPH_ENCODING_ONNX:     u8 = 1;
 }
 
 #[non_exhaustive]
 #[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub struct ExecutionTarget;
 
 #[allow(dead_code)]
@@ -203,4 +205,18 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
         .collect();
 
     v.into_iter().collect()
+}
+
+pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+    let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
+    let mut result: Vec<u8> = Vec::new();
+
+    // TODO
+    // simplify this to potentially a single map.
+    for c in chunks {
+        for u in c.iter() {
+            result.push(*u);
+        }
+    }
+    result
 }

@@ -189,6 +189,12 @@ structure GuestError {
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
+    {
+      value: 2,
+      name: "CORRUPT_INPUT_TENSOR",
+      documentation: """TBD""",
+      tags: ["MlInferenceError"]
+    },
   ])
   @required
   modelError: U8
@@ -213,6 +219,12 @@ structure RuntimeError {
     {
       value: 2,
       name: "ONNX_ERROR",
+      documentation: """TBD""",
+      tags: ["MlInferenceError"]
+    },
+    {
+      value: 3,
+      name: "CONTEXT_NOT_FOUND",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },

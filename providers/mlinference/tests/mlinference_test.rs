@@ -82,43 +82,6 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
 }
 
 /// tests of the Mlinference capability
-async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {
-    let prov = test_provider().await;
-
-    // create client and ctx
-    let client = MlinferenceSender::via(prov);
-    let ctx = Context::default();
-
-    let resp = client.calculate(&ctx, &0).await?;
-    assert_eq!(resp, 1, "0!");
-
-    let resp = client.calculate(&ctx, &1).await?;
-    assert_eq!(resp, 1, "1!");
-
-    Ok(())
-}
-
-/// more tests of the Mlinference interface
-async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
-    let prov = test_provider().await;
-
-    // create client and ctx
-    let client = MlinferenceSender::via(prov);
-    let ctx = Context::default();
-
-    let resp = client.calculate(&ctx, &2).await?;
-    assert_eq!(resp, 2, "2!");
-
-    let resp = client.calculate(&ctx, &3).await?;
-    assert_eq!(resp, 6, "3!");
-
-    let resp = client.calculate(&ctx, &4).await?;
-    assert_eq!(resp, 24, "4!");
-
-    Ok(())
-}
-
-/// tests of the Mlinference capability
 async fn load_one_graph(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
@@ -140,9 +103,9 @@ async fn load_one_graph(_opt: &TestOptions) -> RpcResult<()> {
 
     let resp = env.0.load(&env.1, &load).await?;
 
-    assert_eq!(resp.has_error, false, "should be: 'false'");
-    assert_eq!(resp.guest_error, None, "should be 'None'");
-    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.result.has_error, false, "should be: 'false'");
+    assert_eq!(resp.result.guest_error, None, "should be 'None'");
+    assert_eq!(resp.result.runtime_error, None, "should be 'None'");
     assert_eq!(resp.graph, Graph{graph: 0}, "should be: 0");
 
     Ok(())
@@ -170,9 +133,9 @@ async fn load_multiple_graphs(_opt: &TestOptions) -> RpcResult<()> {
     let load = LoadInput { builder: gb3, encoding: ge, target: et};
     let resp = env.0.load(&env.1, &load).await?;
 
-    assert_eq!(resp.has_error, false, "should be: 'false'");
-    assert_eq!(resp.guest_error, None, "should be 'None'");
-    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.result.has_error, false, "should be: 'false'");
+    assert_eq!(resp.result.guest_error, None, "should be 'None'");
+    assert_eq!(resp.result.runtime_error, None, "should be 'None'");
     assert_eq!(resp.graph, Graph{graph: 3}, "should be: 3");
 
     Ok(())
@@ -190,9 +153,9 @@ async fn load_unsupported_encoding(_opt: &TestOptions) -> RpcResult<()> {
     let load = LoadInput { builder: gb, encoding: ge.clone(), target: et.clone()};
     let resp = env.0.load(&env.1, &load).await?;
 
-    assert_eq!(resp.has_error, true, "should be: 'true'");
-    assert_eq!(resp.guest_error, Some(GuestError{ model_error: 1}), "should be: 1, corresponding to InvalidEncodingError");
-    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.result.has_error, true, "should be: 'true'");
+    assert_eq!(resp.result.guest_error, Some(GuestError{ model_error: 1}), "should be: 1, corresponding to InvalidEncodingError");
+    assert_eq!(resp.result.runtime_error, None, "should be 'None'");
     assert_eq!(resp.graph, Graph{graph: std::u32::MAX}, "should be u32::MAX");
 
     Ok(())
@@ -204,9 +167,9 @@ async fn init_execution_context_valid_model(_opt: &TestOptions) -> RpcResult<()>
 
     let resp = env.0.init_execution_context(&env.1, &Graph{graph: 0}).await?;
 
-    assert_eq!(resp.has_error, false, "should be: 'false'");
-    assert_eq!(resp.guest_error, None, "should be '0' for 'None'");
-    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.result.has_error, false, "should be: 'false'");
+    assert_eq!(resp.result.guest_error, None, "should be '0' for 'None'");
+    assert_eq!(resp.result.runtime_error, None, "should be 'None'");
     assert_eq!(resp.gec, GraphExecutionContext{gec: 0}, "should be '0'");
 
     Ok(())
@@ -218,9 +181,9 @@ async fn init_execution_context_invalid_model(_opt: &TestOptions) -> RpcResult<(
 
     let resp = env.0.init_execution_context(&env.1, &Graph{graph: 1}).await?;
 
-    assert_eq!(resp.has_error, true, "should be: 'true'");
-    assert_eq!(resp.guest_error, Some(GuestError{model_error: 0}), "should be '0' for 'ModelError'");
-    assert_eq!(resp.runtime_error, None, "should be 'None'");
+    assert_eq!(resp.result.has_error, true, "should be: 'true'");
+    assert_eq!(resp.result.guest_error, Some(GuestError{model_error: 0}), "should be '0' for 'ModelError'");
+    assert_eq!(resp.result.runtime_error, None, "should be 'None'");
     assert_eq!(resp.gec, GraphExecutionContext{gec: std::u32::MAX}, "should be u32::MAX");
 
     Ok(())
@@ -237,10 +200,10 @@ async fn set_input_happy_path(_opt: &TestOptions) -> RpcResult<()> {
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
-    assert_eq!(load_result.has_error, false, "should be: 'false'");
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
     
     let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
-    assert_eq!(iec_result.has_error, false, "should be: 'false'");
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
 
     let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
     let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
@@ -275,10 +238,10 @@ async fn set_input_gec_not_found(_opt: &TestOptions) -> RpcResult<()> {
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
-    assert_eq!(load_result.has_error, false, "should be: 'false'");
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
     
     let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
-    assert_eq!(iec_result.has_error, false, "should be: 'false'");
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
 
     let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
     let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
@@ -314,10 +277,10 @@ async fn set_input_corrupt_tensor_input(_opt: &TestOptions) -> RpcResult<()> {
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
-    assert_eq!(load_result.has_error, false, "should be: 'false'");
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
     
     let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
-    assert_eq!(iec_result.has_error, false, "should be: 'false'");
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
 
     let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
     let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();

@@ -12,6 +12,20 @@ use wasmbus_rpc::{
 
 pub const SMITHY_VERSION: &str = "1.0";
 
+/// BaseResult
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BaseResult {
+    #[serde(rename = "guestError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guest_error: Option<GuestError>,
+    #[serde(rename = "hasError")]
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(rename = "runtimeError")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtime_error: Option<RuntimeError>,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExecutionTarget {
     pub target: u8,
@@ -45,15 +59,7 @@ pub struct GuestError {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct IecResult {
     pub gec: GraphExecutionContext,
-    #[serde(rename = "guestError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guest_error: Option<GuestError>,
-    #[serde(rename = "hasError")]
-    #[serde(default)]
-    pub has_error: bool,
-    #[serde(rename = "runtimeError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub runtime_error: Option<RuntimeError>,
+    pub result: BaseResult,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -63,38 +69,17 @@ pub struct LoadInput {
     pub target: ExecutionTarget,
 }
 
+/// LoadResult
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct LoadResult {
     pub graph: Graph,
-    #[serde(rename = "guestError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guest_error: Option<GuestError>,
-    #[serde(rename = "hasError")]
-    #[serde(default)]
-    pub has_error: bool,
-    #[serde(rename = "runtimeError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub runtime_error: Option<RuntimeError>,
+    pub result: BaseResult,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeError {
     #[serde(rename = "runtimeError")]
     pub runtime_error: u8,
-}
-
-/// SetInputResult
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SetInputResult {
-    #[serde(rename = "guestError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guest_error: Option<GuestError>,
-    #[serde(rename = "hasError")]
-    #[serde(default)]
-    pub has_error: bool,
-    #[serde(rename = "runtimeError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub runtime_error: Option<RuntimeError>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -136,7 +121,7 @@ pub trait Mlinference {
     /// init_execution_context
     async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult>;
     /// set_input
-    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult>;
+    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -290,7 +275,7 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
     }
     #[allow(unused)]
     /// set_input
-    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult> {
+    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult> {
         let buf = serialize(arg)?;
         let resp = self
             .transport

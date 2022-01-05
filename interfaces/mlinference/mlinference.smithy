@@ -36,7 +36,13 @@ operation InitExecutionContext {
 /// set_input
 operation SetInput {
   input: SetInputStruct,
-  output: SetInputResult
+  output: BaseResult
+}
+
+/// compute
+operation Compute {
+  input: GraphExecutionContext,
+  output: BaseResult
 }
 
 structure SetInputStruct {
@@ -227,13 +233,20 @@ structure RuntimeError {
   runtimeError: U8
 }
 
-structure LoadResult {
+/// BaseResult
+structure BaseResult {
   @required
   hasError: Boolean,
 
   runtimeError: RuntimeError,
 
-  guestError: GuestError,
+  guestError: GuestError
+}
+
+/// LoadResult
+structure LoadResult {
+  @required
+  result: BaseResult,
 
   @required
   graph: Graph,
@@ -242,11 +255,7 @@ structure LoadResult {
 /// InitExecutionContextResult
 structure IecResult {
   @required
-  hasError: Boolean,
-
-  runtimeError: RuntimeError,
-
-  guestError: GuestError,
+  result: BaseResult,
 
   @required
   gec: GraphExecutionContext,
@@ -255,14 +264,4 @@ structure IecResult {
 structure GraphExecutionContext {
   @required
   gec: U32
-}
-
-/// SetInputResult
-structure SetInputResult {
-  @required
-  hasError: Boolean,
-
-  runtimeError: RuntimeError,
-
-  guestError: GuestError
 }

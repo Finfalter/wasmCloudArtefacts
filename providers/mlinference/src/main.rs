@@ -13,7 +13,7 @@ use log::{debug, info, error};
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::{
     Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError, 
-    RuntimeError, GraphExecutionContext, IecResult, SetInputStruct, SetInputResult
+    RuntimeError, GraphExecutionContext, IecResult, SetInputStruct, BaseResult
 };
 
 use ndarray::Array;
@@ -85,9 +85,11 @@ impl Mlinference for MlinferenceProvider {
             error!("load() - current implementation can only load ONNX models");
 
             let result_with_error = LoadResult {
-                has_error: true,
-                runtime_error: None,
-                guest_error: Some(GuestError::from(GuestErrorWrap::InvalidEncodingError)), 
+                result: BaseResult {
+                    has_error: true,
+                    runtime_error: None,
+                    guest_error: Some(GuestError::from(GuestErrorWrap::InvalidEncodingError)) 
+                },
                 graph: Graph{graph: std::u32::MAX},
             };
             
@@ -109,9 +111,11 @@ impl Mlinference for MlinferenceProvider {
         state.models.insert(graph_handle, model_bytes);
 
         let result_ok = LoadResult {
-            has_error: false,
-            runtime_error: None,
-            guest_error: None,
+            result: BaseResult {
+                has_error: false,
+                runtime_error: None,
+                guest_error: None,
+            },
             graph: Graph::from(graph_handle),
         };
 
@@ -138,9 +142,11 @@ impl Mlinference for MlinferenceProvider {
                 error!("init_execution_context: cannot find model in state with graph {:#?}", graph);
 
                 let result_with_error = IecResult {
-                    has_error: true,
-                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
-                    guest_error: None, 
+                    result: BaseResult {
+                        has_error: true,
+                        runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
+                        guest_error: None, 
+                    },
                     gec: GraphExecutionContext{gec: std::u32::MAX},
                 };
                 
@@ -156,9 +162,11 @@ impl Mlinference for MlinferenceProvider {
                 error!("init_execution_context() - problems with reading given model: {:#?}", e);
 
                 let result_with_error = IecResult {
-                    has_error: true,
-                    runtime_error: None,
-                    guest_error: Some(GuestError::from(GuestErrorWrap::ModelError)), 
+                    result: BaseResult {
+                        has_error: true,
+                        runtime_error: None,
+                        guest_error: Some(GuestError::from(GuestErrorWrap::ModelError)), 
+                    },
                     gec: GraphExecutionContext{gec: std::u32::MAX},
                 };
                 return Ok::<IecResult, wasmbus_rpc::RpcError>(result_with_error);
@@ -173,9 +181,11 @@ impl Mlinference for MlinferenceProvider {
             .insert(gec, TractSession::with_graph(model));
 
         let result_ok = IecResult {
-            has_error: false,
-            runtime_error: None,
-            guest_error: None,
+            result: BaseResult {
+                has_error: false,
+                runtime_error: None,
+                guest_error: None,
+            },
             gec: GraphExecutionContext::from(gec),
         };
 
@@ -189,7 +199,7 @@ impl Mlinference for MlinferenceProvider {
     /// If we wanted to avoid this, we could create an intermediary
     /// HashMap<u32, Array<TIn, D>> and collapse it into a Vec<Array<TIn, D>>
     /// when performing the inference.
-    async fn set_input(&self, _ctx: &Context, arg: &SetInputStruct) -> RpcResult<SetInputResult> {
+    async fn set_input(&self, _ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult> {
         let mut state = self.state.write().unwrap();
 
         let gec_wrap = GECWrap::from(arg.context.gec);
@@ -204,7 +214,7 @@ impl Mlinference for MlinferenceProvider {
             None => {
                 error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
 
-                let result_with_error = SetInputResult {
+                let result_with_error = BaseResult {
                     has_error: true,
                     runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::ContextNotFound)),
                     guest_error: None
@@ -227,7 +237,7 @@ impl Mlinference for MlinferenceProvider {
             Err(e) => {
                 error!("set_input() - cannot set input fact {:#?}", e);
 
-                let result_with_error = SetInputResult {
+                let result_with_error = BaseResult {
                     has_error: true,
                     runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
                     guest_error: None,
@@ -242,7 +252,7 @@ impl Mlinference for MlinferenceProvider {
             Err(e) => {
                 error!("set_input() - corrupt tensor input {:#?}", e);
 
-                let result_with_error = SetInputResult {
+                let result_with_error = BaseResult {
                     has_error: true,
                     runtime_error: None,
                     guest_error: Some(GuestError::from(GuestErrorWrap::CorruptInputTensor))
@@ -264,7 +274,7 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        let result_ok = SetInputResult {
+        let result_ok = BaseResult {
             has_error: false,
             runtime_error: None,
             guest_error: None

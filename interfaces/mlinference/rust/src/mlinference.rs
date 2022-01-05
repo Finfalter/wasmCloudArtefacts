@@ -131,8 +131,6 @@ pub trait Mlinference {
     fn contract_id() -> &'static str {
         "example:interfaces:mlinference"
     }
-    /// Calculates the factorial (n!) of the input parameter
-    async fn calculate(&self, ctx: &Context, arg: &u32) -> RpcResult<u64>;
     /// load
     async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult>;
     /// init_execution_context
@@ -148,16 +146,6 @@ pub trait Mlinference {
 pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
     async fn dispatch(&self, ctx: &Context, message: &Message<'_>) -> RpcResult<Message<'_>> {
         match message.method {
-            "Calculate" => {
-                let value: u32 = deserialize(message.arg.as_ref())
-                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::calculate(self, ctx, &value).await?;
-                let buf = serialize(&resp)?;
-                Ok(Message {
-                    method: "Mlinference.Calculate",
-                    arg: Cow::Owned(buf),
-                })
-            }
             "Load" => {
                 let value: LoadInput = deserialize(message.arg.as_ref())
                     .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
@@ -261,25 +249,6 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 }
 #[async_trait]
 impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for MlinferenceSender<T> {
-    #[allow(unused)]
-    /// Calculates the factorial (n!) of the input parameter
-    async fn calculate(&self, ctx: &Context, arg: &u32) -> RpcResult<u64> {
-        let buf = serialize(arg)?;
-        let resp = self
-            .transport
-            .send(
-                ctx,
-                Message {
-                    method: "Mlinference.Calculate",
-                    arg: Cow::Borrowed(&buf),
-                },
-                None,
-            )
-            .await?;
-        let value = deserialize(&resp)
-            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Calculate", e)))?;
-        Ok(value)
-    }
     #[allow(unused)]
     /// load
     async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> {

@@ -18,13 +18,7 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Calculate, Load, InitExecutionContext, SetInput ]
-}
-
-/// Calculates the factorial (n!) of the input parameter
-operation Calculate {
-  input: U32,
-  output: U64
+  operations: [ Load, InitExecutionContext, SetInput ]
 }
 
 /// load

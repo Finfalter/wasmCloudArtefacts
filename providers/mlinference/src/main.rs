@@ -71,12 +71,6 @@ impl ProviderHandler for MlinferenceProvider {}
 /// Handle Mlinference methods
 #[async_trait]
 impl Mlinference for MlinferenceProvider {
-    /// accepts a number and calculates its factorial
-    async fn calculate(&self, _ctx: &Context, req: &u32) -> RpcResult<u64> {
-        debug!("processing request calculate({})", *req);
-        Ok(n_factorial(*req))
-    }
-
     /// load
     async fn load(&self, _ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> {
         debug!("load() - processing request load()");
@@ -277,21 +271,5 @@ impl Mlinference for MlinferenceProvider {
         };
 
         Ok(result_ok)
-    }
-}
-
-/// calculate n factorial
-fn n_factorial(n: u32) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        _ => {
-            let mut result = 1u64;
-            // add 1 because rust ranges exclude upper bound
-            for v in 2..(n + 1) {
-                result *= v as u64;
-            }
-            result
-        }
     }
 }

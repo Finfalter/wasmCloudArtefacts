@@ -207,6 +207,7 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     v.into_iter().collect()
 }
 
+#[allow(dead_code)]
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
     let mut result: Vec<u8> = Vec::new();

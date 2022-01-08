@@ -26,9 +26,19 @@ pub struct BaseResult {
     pub runtime_error: Option<RuntimeError>,
 }
 
+pub type Buffer = Vec<u8>;
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ExecutionTarget {
     pub target: u8,
+}
+
+/// GetOutputStruct
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GetOutputStruct {
+    pub gec: GraphExecutionContext,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<u32>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -60,6 +70,14 @@ pub struct GuestError {
 pub struct IecResult {
     pub gec: GraphExecutionContext,
     pub result: BaseResult,
+}
+
+/// InferenceResult
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct InferenceResult {
+    pub buffer: Buffer,
+    pub result: BaseResult,
+    pub size: u64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -124,6 +142,8 @@ pub trait Mlinference {
     async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult>;
     /// compute
     async fn compute(&self, ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult>;
+    /// get_output
+    async fn get_output(&self, ctx: &Context, arg: &GetOutputStruct) -> RpcResult<InferenceResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -170,6 +190,16 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
                 let buf = serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.Compute",
+                    arg: Cow::Owned(buf),
+                })
+            }
+            "GetOutput" => {
+                let value: GetOutputStruct = deserialize(message.arg.as_ref())
+                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
+                let resp = Mlinference::get_output(self, ctx, &value).await?;
+                let buf = serialize(&resp)?;
+                Ok(Message {
+                    method: "Mlinference.GetOutput",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -321,6 +351,25 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             .await?;
         let value = deserialize(&resp)
             .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Compute", e)))?;
+        Ok(value)
+    }
+    #[allow(unused)]
+    /// get_output
+    async fn get_output(&self, ctx: &Context, arg: &GetOutputStruct) -> RpcResult<InferenceResult> {
+        let buf = serialize(arg)?;
+        let resp = self
+            .transport
+            .send(
+                ctx,
+                Message {
+                    method: "Mlinference.GetOutput",
+                    arg: Cow::Borrowed(&buf),
+                },
+                None,
+            )
+            .await?;
+        let value = deserialize(&resp)
+            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "GetOutput", e)))?;
         Ok(value)
     }
 }

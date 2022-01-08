@@ -18,7 +18,7 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Load, InitExecutionContext, SetInput, Compute ]
+  operations: [ Load, InitExecutionContext, SetInput, Compute, GetOutput ]
 }
 
 /// load
@@ -43,6 +43,12 @@ operation SetInput {
 operation Compute {
   input: GraphExecutionContext,
   output: BaseResult
+}
+
+/// get_output
+operation GetOutput {
+  input: GetOutputStruct,
+  output: InferenceResult
 }
 
 structure SetInputStruct {
@@ -264,4 +270,28 @@ structure IecResult {
 structure GraphExecutionContext {
   @required
   gec: U32
+}
+
+/// GetOutputStruct
+structure GetOutputStruct {
+  @required
+  gec: GraphExecutionContext,
+
+  index: U32
+}
+
+/// InferenceResult
+structure InferenceResult {
+  @required
+  result: BaseResult,
+
+  @required
+  buffer: Buffer,
+
+  @required
+  size: U64
+}
+
+list Buffer {
+  member: U8
 }

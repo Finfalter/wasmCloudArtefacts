@@ -3,7 +3,7 @@
 mod lib;
 
 use lib::{GraphWrap, GECWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, 
-    TractSession, State, bytes_to_f32_vec, catch_error_as, get_valid_base_result, MlError::*};
+    TractSession, State, f32_vec_to_bytes, bytes_to_f32_vec, catch_error_as, get_valid_base_result, MlError::*};
 
 use std::{
     sync::{Arc, RwLock},
@@ -12,7 +12,8 @@ use std::{
 use log::{debug, info, error};
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::{
-    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GraphExecutionContext, IecResult, SetInputStruct, BaseResult
+    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GraphExecutionContext, IecResult, 
+    SetInputStruct, BaseResult, GetOutputStruct, InferenceResult
 };
 
 use ndarray::Array;
@@ -277,5 +278,79 @@ impl Mlinference for MlinferenceProvider {
         };
 
         Ok(get_valid_base_result())
+    }
+
+    /// get_output
+    async fn get_output(&self, _ctx: &Context, arg: &GetOutputStruct) -> RpcResult<InferenceResult> 
+    {
+        let index = match arg.index {
+            Some(val) => val,
+            None => 0
+        };
+        
+        let state = self.state.read().unwrap();
+
+        let gec_wrap = GECWrap::from(arg.gec.gec);
+
+        let execution = match state.executions.get(&gec_wrap) 
+        {
+            Some(s) => s,
+
+            None => {
+                error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
+
+                let result_with_error = InferenceResult {
+                    result: catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)),
+                    buffer: vec![],
+                    size: 0,
+                };
+
+                return Ok(result_with_error);
+            }
+        };
+
+        let output_tensors = match execution.output_tensors 
+        {
+            Some(ref oa) => oa,
+
+            None => {
+                error!("get_output() - output_tensors for session is none. Perhaps compute() was not called, yet.");
+                
+                let result_with_error = InferenceResult {
+                    result: catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)),
+                    buffer: vec![],
+                    size: 0,
+                };
+
+                return Ok(result_with_error);
+            }
+        };
+
+        let tensor = match output_tensors.get(index as usize) {
+            Some(a) => a,
+
+            None => {
+                error!("get_output() - output_tensors does not contain index {}", index);
+                
+                let result_with_error = InferenceResult {
+                    result: catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)),
+                    buffer: vec![],
+                    size: 0,
+                };
+
+                return Ok(result_with_error);
+            }
+        };
+
+        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
+        let size = bytes.len();
+
+        let ir = InferenceResult {
+            result: get_valid_base_result(),
+            buffer: bytes,
+            size: size as u64
+        };
+
+        Ok(ir)
     }
 }

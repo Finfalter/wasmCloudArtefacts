@@ -122,6 +122,8 @@ pub trait Mlinference {
     async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult>;
     /// set_input
     async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult>;
+    /// compute
+    async fn compute(&self, ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -158,6 +160,16 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
                 let buf = serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.SetInput",
+                    arg: Cow::Owned(buf),
+                })
+            }
+            "Compute" => {
+                let value: GraphExecutionContext = deserialize(message.arg.as_ref())
+                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
+                let resp = Mlinference::compute(self, ctx, &value).await?;
+                let buf = serialize(&resp)?;
+                Ok(Message {
+                    method: "Mlinference.Compute",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -290,6 +302,25 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             .await?;
         let value = deserialize(&resp)
             .map_err(|e| RpcError::Deser(format!("response to {}: {}", "SetInput", e)))?;
+        Ok(value)
+    }
+    #[allow(unused)]
+    /// compute
+    async fn compute(&self, ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult> {
+        let buf = serialize(arg)?;
+        let resp = self
+            .transport
+            .send(
+                ctx,
+                Message {
+                    method: "Mlinference.Compute",
+                    arg: Cow::Borrowed(&buf),
+                },
+                None,
+            )
+            .await?;
+        let value = deserialize(&resp)
+            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Compute", e)))?;
         Ok(value)
     }
 }

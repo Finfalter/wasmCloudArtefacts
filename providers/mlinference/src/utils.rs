@@ -1,10 +1,12 @@
+#![allow(dead_code)]
+
 use std::{
     collections::{btree_map::Keys, BTreeMap},
     cmp::Ordering,
     sync::Arc,
 };
 use serde::{Deserialize, Serialize};
-use wasmcloud_interface_mlinference::{Graph, GuestError, RuntimeError, GraphExecutionContext};
+use wasmcloud_interface_mlinference::{BaseResult, Graph, GuestError, RuntimeError, GraphExecutionContext};
 
 use tract_onnx::prelude::*;
 use tract_onnx::prelude::Tensor as TractTensor;
@@ -13,17 +15,48 @@ use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::Cursor;
 
-// #[allow(dead_code)]
-// pub enum ErrorWrap {
-//     RuntimeErrorWrap,
-//     GuestErrorWrap,
-// }
+#[derive(Debug, thiserror::Error)]
+pub enum MlError {
+    #[error("guest error")]
+    RuntimeErrorWrap(#[from] RuntimeErrorWrap),
 
-#[allow(dead_code)]
+    #[error("other error")]
+    GuestErrorWrap(GuestErrorWrap),
+}
+
+pub fn signal_base_result_ok() -> BaseResult {
+    BaseResult {
+        has_error: false,
+        runtime_error: None,
+        guest_error: None
+    }
+}
+
+pub fn catch_error_as(error: MlError) -> BaseResult {
+    let mut re: Option<RuntimeError> = None;
+    let mut ge: Option<GuestError> = None;
+
+    match error {
+        MlError::RuntimeErrorWrap(rew) => { re = Some(RuntimeError::from(rew)); },
+        MlError::GuestErrorWrap(gew)     => { ge = Some(GuestError::from(gew)); },
+    }
+
+    BaseResult {
+        has_error: true,
+        runtime_error: re,
+        guest_error: ge,
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum RuntimeErrorWrap {
+    #[error("Invalid flag value")]
     RuntimeError = 0,
+    #[error("Invalid flag value")]
     OpenVinoError = 1,
+    #[error("Invalid flag value")]
     OnnxError = 2,
+    #[error("Invalid flag value")]
     ContextNotFound = 3,
 }
 
@@ -38,7 +71,7 @@ impl From<RuntimeErrorWrap> for RuntimeError {
     }
 }
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub enum GuestErrorWrap {
     ModelError = 0,
     InvalidEncodingError = 1,
@@ -56,7 +89,6 @@ impl From<GuestErrorWrap> for GuestError {
 }
 
 #[non_exhaustive]
-#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct GraphEncoding;
 
@@ -67,11 +99,9 @@ impl GraphEncoding {
 }
 
 #[non_exhaustive]
-#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct ExecutionTarget;
 
-#[allow(dead_code)]
 impl ExecutionTarget {
     pub const EXECUTION_TARGET_CPU: u8 = 0;
     pub const EXECUTION_TARGET_GPU: u8 = 1;
@@ -207,7 +237,6 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     v.into_iter().collect()
 }
 
-#[allow(dead_code)]
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
     let mut result: Vec<u8> = Vec::new();

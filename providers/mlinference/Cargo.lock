@@ -1498,6 +1498,7 @@ dependencies = [
  "log",
  "ndarray",
  "serde",
+ "thiserror",
  "tokio",
  "tract-data",
  "tract-linalg",

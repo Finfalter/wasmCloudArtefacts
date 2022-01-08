@@ -3,7 +3,7 @@
 mod utils;
 
 use utils::{GraphWrap, GECWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, 
-    TractSession, State, bytes_to_f32_vec};
+    TractSession, State, bytes_to_f32_vec, catch_error_as, signal_base_result_ok, MlError::*};
 
 use std::{
     sync::{Arc, RwLock},
@@ -12,8 +12,7 @@ use std::{
 use log::{debug, info, error};
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::{
-    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GuestError, 
-    RuntimeError, GraphExecutionContext, IecResult, SetInputStruct, BaseResult
+    Mlinference, MlinferenceReceiver, LoadInput, Graph, LoadResult, GraphExecutionContext, IecResult, SetInputStruct, BaseResult
 };
 
 use ndarray::Array;
@@ -31,32 +30,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// #[derive(Default)]
-// pub struct State {
-//     pub executions: BTreeMap<GraphExecutionContext, TractSession>,
-//     pub models: BTreeMap<GraphWrap, Vec<u8>>,
-// }
-
-// impl State {
-//     /// Helper function that returns the key that is supposed to be inserted next.
-//     pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
-//         match keys.last() {
-//             Some(&k) => {
-//                 let last: u32 = k.into();
-//                 K::from(last + 1)
-//             }
-//             None => K::from(0),
-//         }
-//     }
-// }
-
-// #[derive(Debug)]
-// pub struct TractSession {
-//     pub graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>,
-//     pub input_tensors: Option<Vec<TractTensor>>,
-//     pub output_tensors: Option<Vec<Arc<TractTensor>>>,
-// }
-
 /// mlinference capability provider implementation
 #[derive(Default, Clone, Provider)]
 #[services(Mlinference)]
@@ -72,7 +45,8 @@ impl ProviderHandler for MlinferenceProvider {}
 #[async_trait]
 impl Mlinference for MlinferenceProvider {
     /// load
-    async fn load(&self, _ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> {
+    async fn load(&self, _ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> 
+    {
         debug!("load() - processing request load()");
 
         let builder = &arg.builder;
@@ -85,11 +59,7 @@ impl Mlinference for MlinferenceProvider {
             error!("load() - current implementation can only load ONNX models");
 
             let result_with_error = LoadResult {
-                result: BaseResult {
-                    has_error: true,
-                    runtime_error: None,
-                    guest_error: Some(GuestError::from(GuestErrorWrap::InvalidEncodingError)) 
-                },
+                result: catch_error_as(GuestErrorWrap(GuestErrorWrap::InvalidEncodingError)),
                 graph: Graph{graph: std::u32::MAX},
             };
             
@@ -98,7 +68,6 @@ impl Mlinference for MlinferenceProvider {
 
         let model_bytes = builder.to_vec();
 
-        // TOD0: should not panic in case the lock is not available
         let mut state = self.state.write().unwrap();
         
         let graph_handle = state.key(state.models.keys());
@@ -110,16 +79,12 @@ impl Mlinference for MlinferenceProvider {
 
         state.models.insert(graph_handle, model_bytes);
 
+        info!("load() - current number of models: {:#?}", state.models.len());
+
         let result_ok = LoadResult {
-            result: BaseResult {
-                has_error: false,
-                runtime_error: None,
-                guest_error: None,
-            },
+            result: signal_base_result_ok(),
             graph: Graph::from(graph_handle),
         };
-
-        info!("load() - current number of models: {:#?}", state.models.len());
 
         Ok(result_ok)
     }
@@ -129,24 +94,23 @@ impl Mlinference for MlinferenceProvider {
         &self,
         _ctx: &Context,
         arg: &Graph,
-    ) -> RpcResult<IecResult> {
+    ) -> RpcResult<IecResult> 
+    {
         let graph = GraphWrap::from(arg.graph);
 
         info!("init_execution_context: graph: {:#?}", graph);
 
         // TOD0: should not panic in case the lock is not available
         let mut state = self.state.write().unwrap();
-        let mut model_bytes = match state.models.get(&graph) {
+        let mut model_bytes = match state.models.get(&graph) 
+        {
             Some(mb) => Cursor::new(mb),
+
             None => {
                 error!("init_execution_context: cannot find model in state with graph {:#?}", graph);
 
                 let result_with_error = IecResult {
-                    result: BaseResult {
-                        has_error: true,
-                        runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
-                        guest_error: None, 
-                    },
+                    result: catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)),
                     gec: GraphExecutionContext{gec: std::u32::MAX},
                 };
                 
@@ -162,11 +126,7 @@ impl Mlinference for MlinferenceProvider {
                 error!("init_execution_context() - problems with reading given model: {:#?}", e);
 
                 let result_with_error = IecResult {
-                    result: BaseResult {
-                        has_error: true,
-                        runtime_error: None,
-                        guest_error: Some(GuestError::from(GuestErrorWrap::ModelError)), 
-                    },
+                    result: catch_error_as(GuestErrorWrap(GuestErrorWrap::ModelError)),
                     gec: GraphExecutionContext{gec: std::u32::MAX},
                 };
                 return Ok::<IecResult, wasmbus_rpc::RpcError>(result_with_error);
@@ -181,11 +141,7 @@ impl Mlinference for MlinferenceProvider {
             .insert(gec, TractSession::with_graph(model));
 
         let result_ok = IecResult {
-            result: BaseResult {
-                has_error: false,
-                runtime_error: None,
-                guest_error: None,
-            },
+            result: signal_base_result_ok(),
             gec: GraphExecutionContext::from(gec),
         };
 
@@ -199,7 +155,8 @@ impl Mlinference for MlinferenceProvider {
     /// If we wanted to avoid this, we could create an intermediary
     /// HashMap<u32, Array<TIn, D>> and collapse it into a Vec<Array<TIn, D>>
     /// when performing the inference.
-    async fn set_input(&self, _ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult> {
+    async fn set_input(&self, _ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult> 
+    {
         let mut state = self.state.write().unwrap();
 
         let gec_wrap = GECWrap::from(arg.context.gec);
@@ -209,18 +166,12 @@ impl Mlinference for MlinferenceProvider {
         };
         let tensor = &arg.tensor;
 
-        let execution = match state.executions.get_mut(&gec_wrap) {
+        let execution = match state.executions.get_mut(&gec_wrap) 
+        {
             Some(s) => s,
             None => {
                 error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
-
-                let result_with_error = BaseResult {
-                    has_error: true,
-                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::ContextNotFound)),
-                    guest_error: None
-                };
-
-                return Ok(result_with_error);
+                return Ok(catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::ContextNotFound)));
             }
         };
 
@@ -232,36 +183,29 @@ impl Mlinference for MlinferenceProvider {
 
         match execution.graph.set_input_fact(
         index as usize,
-        InferenceFact::dt_shape(f32::datum_type(), shape.clone()),) {
+        InferenceFact::dt_shape(f32::datum_type(), shape.clone()),) 
+        {
             Ok(s) => s,
+
             Err(e) => {
                 error!("set_input() - cannot set input fact {:#?}", e);
-
-                let result_with_error = BaseResult {
-                    has_error: true,
-                    runtime_error: Some(RuntimeError::from(RuntimeErrorWrap::RuntimeError)),
-                    guest_error: None,
-                };
-                return Ok(result_with_error);
+                return Ok(catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)));
             }
         };
         
         let data = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
-        let input: TractTensor = match Array::from_shape_vec(shape, data){
+        let input: TractTensor = match Array::from_shape_vec(shape, data) 
+        {
             Ok(s) => s.into(),
+
             Err(e) => {
                 error!("set_input() - corrupt tensor input {:#?}", e);
-
-                let result_with_error = BaseResult {
-                    has_error: true,
-                    runtime_error: None,
-                    guest_error: Some(GuestError::from(GuestErrorWrap::CorruptInputTensor))
-                };
-                return Ok(result_with_error);
+                return Ok(catch_error_as(GuestErrorWrap(GuestErrorWrap::CorruptInputTensor)));
             }
         };
 
-        match execution.input_tensors {
+        match execution.input_tensors 
+        {
             Some(ref mut input_arrays) => {
                 input_arrays.push(input);
                 log::info!(
@@ -274,12 +218,63 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        let result_ok = BaseResult {
-            has_error: false,
-            runtime_error: None,
-            guest_error: None
+        Ok(signal_base_result_ok())
+    }
+
+    async fn compute(&self, _ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult> {
+        let mut state = self.state.write().unwrap();
+
+        let gec_wrap = GECWrap::from(arg.gec);
+
+        let execution = match state.executions.get_mut(&gec_wrap) 
+        {
+            Some(s) => s,
+
+            None => {
+                error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
+                return Ok(catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::ContextNotFound)));
+            }
         };
 
-        Ok(result_ok)
+        // TODO
+        //
+        // There are two `.clone()` calls here that could prove
+        // to be *very* inneficient, one in getting the input tensors,
+        // the other in making the model runnable.
+        let input_tensors: Vec<TractTensor> = execution
+            .input_tensors
+            .as_ref()
+            .unwrap_or(&vec![])
+            .clone()
+            .into_iter()
+            .collect();
+
+        info!("compute() - input tensors contains {} elements", input_tensors.len() );
+
+        // Some ONNX models don't specify their input tensor
+        // shapes completely, so we can only call `.into_optimized()` after we
+        // have set the input tensor shapes.
+        let output_tensors = execution
+            .graph
+            .clone()
+            .into_optimized().map_err(|_| catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::OnnxError))).unwrap()
+            .into_runnable().map_err(|_| catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::OnnxError))).unwrap()
+            .run(input_tensors.into()).map_err(|_| catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::OnnxError))).unwrap();
+
+        info!("compute() - output tensor contains {} elements", output_tensors.len() );
+
+        match execution.output_tensors 
+        {
+            Some(_) => {
+                error!("compute() - existing data in output_tensors, aborting");
+                return Ok(catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)));
+            },
+
+            None => {
+                execution.output_tensors = Some(output_tensors.into_iter().collect());
+            }
+        };
+
+        Ok(signal_base_result_ok())
     }
 }

@@ -18,7 +18,7 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Load, InitExecutionContext, SetInput ]
+  operations: [ Load, InitExecutionContext, SetInput, Compute ]
 }
 
 /// load

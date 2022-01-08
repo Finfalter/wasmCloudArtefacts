@@ -14,7 +14,8 @@
     tract-data        = "0.15.8"
     tract-linalg      = "0.15.8"
     tract-onnx        = { version = "0.15.8" }
-    byteorder = "1.4"
+    byteorder         = "1.4"
+    thiserror         = "1.0"
 
 # test dependencies
 [dev-dependencies]

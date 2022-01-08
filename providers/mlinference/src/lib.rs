@@ -24,7 +24,7 @@ pub enum MlError {
     GuestErrorWrap(GuestErrorWrap),
 }
 
-pub fn signal_base_result_ok() -> BaseResult {
+pub fn get_valid_base_result() -> BaseResult {
     BaseResult {
         has_error: false,
         runtime_error: None,

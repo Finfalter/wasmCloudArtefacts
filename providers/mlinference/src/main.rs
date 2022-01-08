@@ -1,9 +1,9 @@
 //! mlinference capability provider
 //!
-mod utils;
+mod lib;
 
-use utils::{GraphWrap, GECWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, 
-    TractSession, State, bytes_to_f32_vec, catch_error_as, signal_base_result_ok, MlError::*};
+use lib::{GraphWrap, GECWrap, GraphEncoding, GuestErrorWrap, RuntimeErrorWrap, 
+    TractSession, State, bytes_to_f32_vec, catch_error_as, get_valid_base_result, MlError::*};
 
 use std::{
     sync::{Arc, RwLock},
@@ -82,7 +82,7 @@ impl Mlinference for MlinferenceProvider {
         info!("load() - current number of models: {:#?}", state.models.len());
 
         let result_ok = LoadResult {
-            result: signal_base_result_ok(),
+            result: get_valid_base_result(),
             graph: Graph::from(graph_handle),
         };
 
@@ -141,7 +141,7 @@ impl Mlinference for MlinferenceProvider {
             .insert(gec, TractSession::with_graph(model));
 
         let result_ok = IecResult {
-            result: signal_base_result_ok(),
+            result: get_valid_base_result(),
             gec: GraphExecutionContext::from(gec),
         };
 
@@ -218,10 +218,11 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        Ok(signal_base_result_ok())
+        Ok(get_valid_base_result())
     }
 
-    async fn compute(&self, _ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult> {
+    async fn compute(&self, _ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult> 
+    {
         let mut state = self.state.write().unwrap();
 
         let gec_wrap = GECWrap::from(arg.gec);
@@ -275,6 +276,6 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        Ok(signal_base_result_ok())
+        Ok(get_valid_base_result())
     }
 }

@@ -1,10 +1,7 @@
-// mod model;
-// use model::SINE_MODEL;
+#[path = "../src/lib.rs"]
+mod lib;
 
-#[path = "../src/utils.rs"]
-mod utils;
-
-use utils::{f32_vec_to_bytes};
+use lib::{f32_vec_to_bytes};
 
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::*;
@@ -58,7 +55,9 @@ async fn run_all() {
         init_execution_context_valid_model,
         set_input_happy_path,
         set_input_gec_not_found,
-        set_input_corrupt_tensor_input);
+        set_input_corrupt_tensor_input,
+        compute_happy_path,
+        compute_gec_not_found);
 
     print_test_results(&res);
 
@@ -85,11 +84,7 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
 async fn load_one_graph(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
-    //let gb1: GraphBuilder = vec![0xa1, 0xa2, 0xa3];
-    //let gb1: GraphBuilder = SINE_MODEL.to_vec();
     let gb1 = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
-    let _gb2: GraphBuilder = vec![0xa2, 0xa3, 0xa4];
-    let _gb3: GraphBuilder = vec![0xa3, 0xa4, 0xa5];
 
     let ge: GraphEncoding = GraphEncoding { encoding: 1 };
 
@@ -195,8 +190,8 @@ async fn set_input_happy_path(_opt: &TestOptions) -> RpcResult<()> {
 
     let load = get_load(
         IDENTITY_MODEL_PATH,
-         utils::GraphEncoding::GRAPH_ENCODING_ONNX,
-         utils::ExecutionTarget::EXECUTION_TARGET_CPU)
+         lib::GraphEncoding::GRAPH_ENCODING_ONNX,
+         lib::ExecutionTarget::EXECUTION_TARGET_CPU)
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
@@ -233,8 +228,8 @@ async fn set_input_gec_not_found(_opt: &TestOptions) -> RpcResult<()> {
 
     let load = get_load(
         IDENTITY_MODEL_PATH,
-         utils::GraphEncoding::GRAPH_ENCODING_ONNX,
-         utils::ExecutionTarget::EXECUTION_TARGET_CPU)
+         lib::GraphEncoding::GRAPH_ENCODING_ONNX,
+         lib::ExecutionTarget::EXECUTION_TARGET_CPU)
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
@@ -272,8 +267,8 @@ async fn set_input_corrupt_tensor_input(_opt: &TestOptions) -> RpcResult<()> {
 
     let load = get_load(
         IDENTITY_MODEL_PATH,
-         utils::GraphEncoding::GRAPH_ENCODING_ONNX,
-         utils::ExecutionTarget::EXECUTION_TARGET_CPU)
+         lib::GraphEncoding::GRAPH_ENCODING_ONNX,
+         lib::ExecutionTarget::EXECUTION_TARGET_CPU)
          .await;
 
     let load_result = env.0.load(&env.1, &load).await?;
@@ -303,4 +298,89 @@ async fn set_input_corrupt_tensor_input(_opt: &TestOptions) -> RpcResult<()> {
     assert_eq!(set_result.guest_error, Some(GuestError{model_error: 2}), "should be: '2' - 'CORRUPT_INPUT_TENSOR'");
 
     Ok(())
+}
+
+/// tests of the Mlinference capability - set_input()
+async fn compute_happy_path(_opt: &TestOptions) -> RpcResult<()> {
+    let env = get_environment().await;
+
+    let load_result = env.0.load(&env.1, &get_trivial_load().await).await?;
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
+    
+    let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
+
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
+    println!("set_input_basics() - sending simple tensor: {:#?}", input_tensor);
+
+    let tensor = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+
+    let gec:      u32 = iec_result.gec.gec;
+    let same_gec: u32 = gec;
+
+    let set_input_struct = SetInputStruct {
+        context: GraphExecutionContext{ gec: gec },
+        index: Some(0),
+        tensor: Tensor {
+            dimensions: shape,
+            ttype: TensorType{ttype: 1},
+            data: tensor,
+        }
+    };
+
+    let set_result = env.0.set_input(&env.1, &set_input_struct).await?;
+    assert_eq!(set_result.has_error, false, "should be: 'false'");
+
+    let base_result = env.0.compute(&env.1, &GraphExecutionContext{ gec: same_gec }).await?;
+    assert_eq!(base_result.has_error, false, "should be: 'false'");
+
+    Ok(())
+}
+
+/// tests of the Mlinference capability - set_input()
+async fn compute_gec_not_found(_opt: &TestOptions) -> RpcResult<()> {
+    let env = get_environment().await;
+
+    let load_result = env.0.load(&env.1, &get_trivial_load().await).await?;
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
+    
+    let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
+
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
+    println!("set_input_basics() - sending simple tensor: {:#?}", input_tensor);
+
+    let tensor = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+
+    let gec:      u32 = iec_result.gec.gec;
+
+    let set_input_struct = SetInputStruct {
+        context: GraphExecutionContext{ gec: gec },
+        index: Some(0),
+        tensor: Tensor {
+            dimensions: shape,
+            ttype: TensorType{ttype: 1},
+            data: tensor,
+        }
+    };
+
+    let set_result = env.0.set_input(&env.1, &set_input_struct).await?;
+    assert_eq!(set_result.has_error, false, "should be: 'false'");
+
+    let base_result = env.0.compute(&env.1, &GraphExecutionContext{ gec: std::u32::MAX }).await?;
+    assert_eq!(base_result.has_error, true, "should be: 'true'");
+    assert_eq!(base_result.runtime_error, Some(RuntimeError{runtime_error: 3}), "should be: '3' - 'CONTEXT_NOT_FOUND'");
+
+    Ok(())
+}
+
+async fn get_trivial_load() -> LoadInput {
+    get_load(
+        IDENTITY_MODEL_PATH,
+         lib::GraphEncoding::GRAPH_ENCODING_ONNX,
+         lib::ExecutionTarget::EXECUTION_TARGET_CPU)
+         .await
+
 }

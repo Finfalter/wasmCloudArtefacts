@@ -1,4 +1,4 @@
-// mlinference.smithy
+0// mlinference.smithy
 
 // Tell the code generator how to reference symbols defined in this namespace
 metadata package = [ { namespace: "com.pervaisive.interfaces.mlinference", crate: "mlinference" } ]
@@ -10,7 +10,7 @@ use org.wasmcloud.model#U8
 use org.wasmcloud.model#U32
 use org.wasmcloud.model#U64
 
-/// The Mlinference service 
+/// The Mlinference service mimics WASI-NN. It provides five methods.
 @wasmbus(
     contractId: "example:interfaces:mlinference",
     actorReceive: true,

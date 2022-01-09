@@ -57,7 +57,8 @@ async fn run_all() {
         set_input_gec_not_found,
         set_input_corrupt_tensor_input,
         compute_happy_path,
-        compute_gec_not_found);
+        compute_gec_not_found,
+        get_output_happy_path);
 
     print_test_results(&res);
 
@@ -375,6 +376,55 @@ async fn compute_gec_not_found(_opt: &TestOptions) -> RpcResult<()> {
 
     Ok(())
 }
+
+/// tests of the Mlinference capability - set_input()
+async fn get_output_happy_path(_opt: &TestOptions) -> RpcResult<()> {
+    let env = get_environment().await;
+
+    let load_result = env.0.load(&env.1, &get_trivial_load().await).await?;
+    assert_eq!(load_result.result.has_error, false, "should be: 'false'");
+    
+    let iec_result = env.0.init_execution_context(&env.1, &load_result.graph).await?;
+    assert_eq!(iec_result.result.has_error, false, "should be: 'false'");
+
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
+    println!("set_input_basics() - sending simple tensor: {:#?}", input_tensor);
+
+    let tensor = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+
+    let gec:      u32 = iec_result.gec.gec;
+
+    let set_input_struct = SetInputStruct {
+        context: GraphExecutionContext{ gec: gec },
+        index: Some(0),
+        tensor: Tensor {
+            dimensions: shape,
+            ttype: TensorType{ttype: 1},
+            data: tensor,
+        }
+    };
+
+    let set_result = env.0.set_input(&env.1, &set_input_struct).await?;
+    assert_eq!(set_result.has_error, false, "should be: 'false'");
+
+    let base_result = env.0.compute(&env.1, &GraphExecutionContext{ gec: gec }).await?;
+    assert_eq!(base_result.has_error, false, "should be: 'false'");
+
+    let set_output_struct = GetOutputStruct {
+        gec: GraphExecutionContext { gec: gec},
+        index: Some(0),
+    };
+
+    let inference_result = env.0.get_output(&env.1, &set_output_struct).await?;
+    let base_result = inference_result.result;
+    assert_eq!(base_result.has_error, false, "should be: 'false'");
+    println!("got buffer with length: {:#?}", inference_result.size);
+    assert!(inference_result.size > 0, "size is {:#?}", inference_result.size);
+
+    Ok(())
+}
+
 
 async fn get_trivial_load() -> LoadInput {
     get_load(

@@ -297,7 +297,7 @@ impl Mlinference for MlinferenceProvider {
             Some(s) => s,
 
             None => {
-                error!("set_input() - cannot find session in state with context {:#?}", gec_wrap);
+                error!("get_output() - cannot find session in state with context {:#?}", gec_wrap);
 
                 let result_with_error = InferenceResult {
                     result: catch_error_as(RuntimeErrorWrap(RuntimeErrorWrap::RuntimeError)),
@@ -344,6 +344,8 @@ impl Mlinference for MlinferenceProvider {
 
         let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
         let size = bytes.len();
+
+        info!("get_output() - returning buffer of size {}", size );
 
         let ir = InferenceResult {
             result: get_valid_base_result(),

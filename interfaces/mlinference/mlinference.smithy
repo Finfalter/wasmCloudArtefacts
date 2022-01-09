@@ -1,4 +1,4 @@
-0// mlinference.smithy
+// mlinference.smithy
 
 // Tell the code generator how to reference symbols defined in this namespace
 metadata package = [ { namespace: "com.pervaisive.interfaces.mlinference", crate: "mlinference" } ]
@@ -10,7 +10,15 @@ use org.wasmcloud.model#U8
 use org.wasmcloud.model#U32
 use org.wasmcloud.model#U64
 
-/// The Mlinference service mimics WASI-NN. It provides five methods.
+//! The Mlinference service mimics WASI-NN. It provides the following five methods:
+//!
+//! - load()
+//! - init_execution_context()
+//! - set_input()
+//! - compute()
+//! - get_output()
+
+/// The Mlinference service
 @wasmbus(
     contractId: "example:interfaces:mlinference",
     actorReceive: true,
@@ -174,6 +182,7 @@ structure ExecutionTarget {
   target: U8
 }
 
+/// [`Graph`]!
 structure Graph {
   @required
   graph: U32
@@ -239,7 +248,11 @@ structure RuntimeError {
   runtimeError: U8
 }
 
-/// BaseResult
+/// [`BaseResult`]!
+/// This structure signals if there is an error and, if yes, of which kind the error is.
+///
+/// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining
+/// fields shall have a value differing from 'None'.
 structure BaseResult {
   @required
   hasError: Boolean,
@@ -250,6 +263,8 @@ structure BaseResult {
 }
 
 /// LoadResult
+/// This structure provides error information based on [BaseResult] as well as a value 
+/// for [Graph], the formal return type of the `load()` function.
 structure LoadResult {
   @required
   result: BaseResult,

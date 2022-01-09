@@ -12,7 +12,11 @@ use wasmbus_rpc::{
 
 pub const SMITHY_VERSION: &str = "1.0";
 
-/// BaseResult
+/// [`BaseResult`]!
+/// This structure signals if there is an error and, if yes, of which kind the error is.
+///
+/// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining
+/// fields shall have a value differing from 'None'.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BaseResult {
     #[serde(rename = "guestError")]
@@ -41,6 +45,7 @@ pub struct GetOutputStruct {
     pub index: Option<u32>,
 }
 
+/// [`Graph`]!
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Graph {
     pub graph: u32,
@@ -88,6 +93,8 @@ pub struct LoadInput {
 }
 
 /// LoadResult
+/// This structure provides error information based on [BaseResult] as well as a value
+/// for [Graph], the formal return type of the `load()` function.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct LoadResult {
     pub graph: Graph,

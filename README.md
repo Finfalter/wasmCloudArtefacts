@@ -24,7 +24,7 @@ An most basic design of an example application may be illustrated as shown in th
 	`compute()` and `get_output()`. 
 
 
-<div style="width: 40%; height: 25%">
+<div style="width: 20%; height: 13%">
 
 ![most basic design](images/most_basic_setup.png "Most basic design of an example application doing inference")
 </div>

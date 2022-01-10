@@ -12,7 +12,7 @@ use wasmbus_rpc::{
 
 pub const SMITHY_VERSION: &str = "1.0";
 
-/// [`BaseResult`]!
+/// BaseResult
 /// This structure signals if there is an error and, if yes, of which kind the error is.
 ///
 /// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining
@@ -45,7 +45,7 @@ pub struct GetOutputStruct {
     pub index: Option<u32>,
 }
 
-/// [`Graph`]!
+/// Graph
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Graph {
     pub graph: u32,

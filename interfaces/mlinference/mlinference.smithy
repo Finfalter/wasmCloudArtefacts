@@ -182,7 +182,7 @@ structure ExecutionTarget {
   target: U8
 }
 
-/// [`Graph`]!
+/// Graph
 structure Graph {
   @required
   graph: U32
@@ -248,7 +248,7 @@ structure RuntimeError {
   runtimeError: U8
 }
 
-/// [`BaseResult`]!
+/// BaseResult
 /// This structure signals if there is an error and, if yes, of which kind the error is.
 ///
 /// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining

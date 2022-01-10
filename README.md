@@ -24,12 +24,12 @@ An most basic design of an example application may be illustrated as shown in th
 	`compute()` and `get_output()`. 
 
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![most basic design](images/most_basic_setup.png "Most basic design of an example application doing inference")
 </div>
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![legend for most basic design](images/legend_basic_design.png "Most basic design of an example application doing inference")
 
@@ -39,7 +39,7 @@ An most basic design of an example application may be illustrated as shown in th
 
 When a request comes in (1) via the http-server (http) it is routed (2) to the actor (M). The actor (M) registers (3) at the inference engine (IE) in case it did not do so before and provides the data (3) to the inference engine (IE). The result is passed (4) from the inference engine (IE) back to the actor (M) which, in turn, passes (5) the result to the http-server (https) where it is sent as a response.
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![legend for most basic design](images/most_basic_design_data_flow.png "Most basic design of an example application doing inference")
 
@@ -51,12 +51,12 @@ A more advanced design additionally introduces an inference client (IC). The inf
 
 > **_[Note]_**  The use of an inference client (IC) allows an easy deployment of multiple actors (M). However, the interface of such a design would differ from an interface of the basic design.
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![most basic design](images/more_advanced_design.png "Most basic design of an example application doing inference")
 </div>
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![legend for most basic design](images/legend_more_advanced_design.png "Most basic design of an example application doing inference")
 
@@ -69,14 +69,14 @@ The data flow in a more advanced design differs in two important points from the
 1. If the actor (M) has to register its model at the inference engine (IE) prior to any inference request.
 2. Most of the communication is now handled by the inference client (IC). After having registered the actor (M) may as well be removed from the system. 
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![most basic design](images/more_advanced_design_data_flow_wo_text.png "Most basic design of an example application doing inference")
 </div>
 
 The following screenshot illustrates the sequence of a possible inference request. It is done in two steps. A first, optional, step can be to query the available models. The second step is about the inference.
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![most basic design](images/more_advanced_design_data_flow.png "Most basic design of an example application doing inference")
 </div>
@@ -85,7 +85,7 @@ The following screenshot illustrates the sequence of a possible inference reques
 
 It may be advantageous if the data source for inference is internal to the runtime. For example, the internal data source may be represented by a further capability provider (Cam) providing images. In this case it would be necessary to assign this capability provider (Cam) to the AI model of the appropriate actor (M).
 
-<div style="width: 80%; height: 50%">
+<div style="width: 40%; height: 25%">
 
 ![most basic design](images/more_advanced_design_internal_data_source.png "Most basic design of an example application doing inference")
 </div>

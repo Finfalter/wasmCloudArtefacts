@@ -18,7 +18,9 @@ This repository provides a [wasmCloud](https://wasmcloud.dev/) capability provid
 
 ### Most basic design
 
-![picture alt](http://via.placeholder.com/200x150 "Title is optional")
+![picture alt](https://github.com/Finfalter/wasmCloudArtefacts/blob/main/images/most_basic_setup.png/200x150 "Most basic design of an example application doing inference")
+
+![picture alt](https://github.com/Finfalter/wasmCloudArtefacts/blob/main/images/basic_legend.png/200x150 "Most basic design of an example application doing inference")
 
 
 ## Backlog / Roadmap

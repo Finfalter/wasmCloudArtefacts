@@ -19,7 +19,7 @@ use ndarray::{array};
 // In case of problems define the following
 // export WASMCLOUD_OCI_ALLOWED_INSECURE=*
 
-const IDENTITY_MODEL_PATH: &str = "tests/identity_input_output.onnx";
+const IDENTITY_MODEL_PATH: &str = "tests/testdata/models/identity_input_output.onnx";
 
 async fn get_environment() -> (MlinferenceSender<Provider>, Context) {
     // create a provider, client and context

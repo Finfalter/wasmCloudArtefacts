@@ -6,17 +6,14 @@ metadata package = [ { namespace: "com.pervaisive.interfaces.mlinference", crate
 namespace com.pervaisive.interfaces.mlinference
 
 use org.wasmcloud.model#wasmbus
+use org.wasmcloud.model#n
 use org.wasmcloud.model#U8
 use org.wasmcloud.model#U32
-use org.wasmcloud.model#U64
 
-//! The Mlinference service mimics WASI-NN. It provides the following five methods:
+//! The Mlinference service issues inference requests via an inference engine.
+//! It exposes one method:
 //!
-//! - load()
-//! - init_execution_context()
-//! - set_input()
 //! - compute()
-//! - get_output()
 
 /// The Mlinference service
 @wasmbus(
@@ -26,55 +23,34 @@ use org.wasmcloud.model#U64
 
 service Mlinference {
   version: "0.1",
-  operations: [ Load, InitExecutionContext, SetInput, Compute, GetOutput ]
-}
-
-/// load
-operation Load {
-  input: LoadInput,
-  output: LoadResult
-}
-
-/// init_execution_context
-operation InitExecutionContext {
-  input: Graph,
-  output: IecResult
-}
-
-/// set_input
-operation SetInput {
-  input: SetInputStruct,
-  output: BaseResult
+  operations: [ Compute ]
 }
 
 /// compute
 operation Compute {
-  input: GraphExecutionContext,
-  output: BaseResult
-}
-
-/// get_output
-operation GetOutput {
-  input: GetOutputStruct,
+  input: InferenceRequest,
   output: InferenceResult
 }
 
-structure SetInputStruct {
-    @required
-    context: GraphExecutionContext,
+structure InferenceRequest {
+  @required
+  @n(0)
+  model: String,
 
-    index: U32,
+  @required
+  @n(1)
+  tensor: Tensor,
 
-    @required
-    tensor: Tensor
+  @required
+  @n(2)
+  index: U32
 }
 
+/// The tensor's dimensions and type are provided as metadata to a model.
+/// Any metadata shall be associated to the respective model in a blob store.
 structure Tensor {
     @required
     dimensions: TensorDimensions,
-
-    @required
-    ttype: TensorType,
 
     @required
     data: TensorData
@@ -84,112 +60,31 @@ list TensorDimensions {
   member: U32
 }
 
-structure TensorType {
-  // enum seems to have no impact on the code generator
-  @enum([
-    {
-      value: 0,
-      name: "TENSOR_TYPE_F16",
-      documentation: """TBD""",
-      tags: ["tensorType"]
-    },
-    {
-      value: 1,
-      name: "TENSOR_TYPE_F32",
-      documentation: """TBD""",
-      tags: ["tensorType"]
-    },
-    {
-      value: 2,
-      name: "TENSOR_TYPE_U8",
-      documentation: """TBD""",
-      tags: ["tensorType"]
-    },
-    {
-      value: 3,
-      name: "TENSOR_TYPE_I32",
-      documentation: """TBD""",
-      tags: ["tensorType"]
-    }
-  ])
-  @required
-  ttype: U8
-}
-
 list TensorData {
   member: U8
 }
 
-structure LoadInput {
-    @required
-    builder: GraphBuilder,
-
-    @required
-    encoding: GraphEncoding,
-
-    @required
-    target: ExecutionTarget
-}
-
-/// see LoadInput
-list GraphBuilder {
-  member: U8
-}
-
-structure GraphEncoding {
-  // enum seems to have no impact on the code generator
-  @enum([
-    {
-        value: 0,
-        name: "OPENVINO",
-        documentation: """TBD""",
-        tags: ["graphEncoding"]
-    },
-    {
-        value: 1,
-        name: "ONNX",
-        documentation: """TBD""",
-        tags: ["graphEncoding"]
-    }
-  ])
+/// InferenceResult
+structure InferenceResult {
   @required
-  encoding: U8
-}
+  @n(0)
+  result: ResultStatus,
 
-structure ExecutionTarget {
-  // enum seems to have no impact on the code generator
-  @enum([
-    {
-      value: 0,
-      name: "EXECUTION_TARGET_CPU",
-      documentation: """TBD""",
-      tags: ["executionTarget"]
-    },
-    {
-      value: 1,
-      name: "EXECUTION_TARGET_GPU",
-      documentation: """TBD""",
-      tags: ["executionTarget"]
-    },
-    {
-      value: 2,
-      name: "EXECUTION_TARGET_TPU",
-      documentation: """TBD""",
-      tags: ["executionTarget"]
-    }
-  ])
   @required
-  target: U8
+  @n(1)
+  tensor: Tensor
 }
 
-/// Graph
-structure Graph {
+structure ResultStatus {
   @required
-  graph: U32
+  @n(0)
+  hasError: Boolean,
+
+  @n(1)
+  Error: MlError
 }
 
-@error("client")
-structure GuestError {
+structure MlError {
   // enum seems to have no impact on the code generator
   @enum([
     {
@@ -210,103 +105,31 @@ structure GuestError {
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
-  ])
-  @required
-  modelError: U8
-}
-
-@error("server")
-structure RuntimeError {
-  // enum seems to have no impact on the code generator
-  @enum([
     {
-      value: 0,
+      value: 3,
       name: "RUNTIME_ERROR",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
     {
-      value: 1,
+      value: 4,
       name: "OPEN_VINO_ERROR",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
     {
-      value: 2,
+      value: 5,
       name: "ONNX_ERROR",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
     {
-      value: 3,
+      value: 6,
       name: "CONTEXT_NOT_FOUND",
       documentation: """TBD""",
       tags: ["MlInferenceError"]
     },
   ])
   @required
-  runtimeError: U8
-}
-
-/// BaseResult
-/// This structure signals if there is an error and, if yes, of which kind the error is.
-///
-/// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining
-/// fields shall have a value differing from 'None'.
-structure BaseResult {
-  @required
-  hasError: Boolean,
-
-  runtimeError: RuntimeError,
-
-  guestError: GuestError
-}
-
-/// LoadResult
-/// This structure provides error information based on [BaseResult] as well as a value 
-/// for [Graph], the formal return type of the `load()` function.
-structure LoadResult {
-  @required
-  result: BaseResult,
-
-  @required
-  graph: Graph,
-}
-
-/// InitExecutionContextResult
-structure IecResult {
-  @required
-  result: BaseResult,
-
-  @required
-  gec: GraphExecutionContext,
-}
-
-structure GraphExecutionContext {
-  @required
-  gec: U32
-}
-
-/// GetOutputStruct
-structure GetOutputStruct {
-  @required
-  gec: GraphExecutionContext,
-
-  index: U32
-}
-
-/// InferenceResult
-structure InferenceResult {
-  @required
-  result: BaseResult,
-
-  @required
-  buffer: Buffer,
-
-  @required
-  size: U64
-}
-
-list Buffer {
-  member: U8
+  modelError: U8
 }

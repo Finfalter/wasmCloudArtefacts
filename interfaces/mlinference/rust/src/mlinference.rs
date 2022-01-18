@@ -12,124 +12,48 @@ use wasmbus_rpc::{
 
 pub const SMITHY_VERSION: &str = "1.0";
 
-/// BaseResult
-/// This structure signals if there is an error and, if yes, of which kind the error is.
-///
-/// The flag `hasError` is mandatory. In case it is set to `true` one of the remaining
-/// fields shall have a value differing from 'None'.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct BaseResult {
-    #[serde(rename = "guestError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub guest_error: Option<GuestError>,
-    #[serde(rename = "hasError")]
+pub struct InferenceRequest {
     #[serde(default)]
-    pub has_error: bool,
-    #[serde(rename = "runtimeError")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub runtime_error: Option<RuntimeError>,
-}
-
-pub type Buffer = Vec<u8>;
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ExecutionTarget {
-    pub target: u8,
-}
-
-/// GetOutputStruct
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GetOutputStruct {
-    pub gec: GraphExecutionContext,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub index: Option<u32>,
-}
-
-/// Graph
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Graph {
-    pub graph: u32,
-}
-
-/// see LoadInput
-pub type GraphBuilder = Vec<u8>;
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GraphEncoding {
-    pub encoding: u8,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GraphExecutionContext {
-    pub gec: u32,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GuestError {
-    #[serde(rename = "modelError")]
-    pub model_error: u8,
-}
-
-/// InitExecutionContextResult
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct IecResult {
-    pub gec: GraphExecutionContext,
-    pub result: BaseResult,
+    pub model: String,
+    pub tensor: Tensor,
+    pub index: u32,
 }
 
 /// InferenceResult
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct InferenceResult {
-    pub buffer: Buffer,
-    pub result: BaseResult,
-    pub size: u64,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct LoadInput {
-    pub builder: GraphBuilder,
-    pub encoding: GraphEncoding,
-    pub target: ExecutionTarget,
-}
-
-/// LoadResult
-/// This structure provides error information based on [BaseResult] as well as a value
-/// for [Graph], the formal return type of the `load()` function.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct LoadResult {
-    pub graph: Graph,
-    pub result: BaseResult,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct RuntimeError {
-    #[serde(rename = "runtimeError")]
-    pub runtime_error: u8,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SetInputStruct {
-    pub context: GraphExecutionContext,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub index: Option<u32>,
+    pub result: ResultStatus,
     pub tensor: Tensor,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct MlError {
+    #[serde(rename = "modelError")]
+    pub model_error: u8,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ResultStatus {
+    #[serde(rename = "hasError")]
+    #[serde(default)]
+    pub has_error: bool,
+    #[serde(rename = "Error")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<MlError>,
+}
+
+/// The tensor's dimensions and type are provided as metadata to a model.
+/// Any metadata shall be associated to the respective model in a blob store.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Tensor {
     pub data: TensorData,
     pub dimensions: TensorDimensions,
-    pub ttype: TensorType,
 }
 
 pub type TensorData = Vec<u8>;
 
 pub type TensorDimensions = Vec<u32>;
-
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TensorType {
-    pub ttype: u8,
-}
 
 /// The Mlinference service
 /// wasmbus.contractId: example:interfaces:mlinference
@@ -141,16 +65,8 @@ pub trait Mlinference {
     fn contract_id() -> &'static str {
         "example:interfaces:mlinference"
     }
-    /// load
-    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult>;
-    /// init_execution_context
-    async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult>;
-    /// set_input
-    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult>;
     /// compute
-    async fn compute(&self, ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult>;
-    /// get_output
-    async fn get_output(&self, ctx: &Context, arg: &GetOutputStruct) -> RpcResult<InferenceResult>;
+    async fn compute(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -160,53 +76,13 @@ pub trait Mlinference {
 pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
     async fn dispatch(&self, ctx: &Context, message: &Message<'_>) -> RpcResult<Message<'_>> {
         match message.method {
-            "Load" => {
-                let value: LoadInput = deserialize(message.arg.as_ref())
-                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::load(self, ctx, &value).await?;
-                let buf = serialize(&resp)?;
-                Ok(Message {
-                    method: "Mlinference.Load",
-                    arg: Cow::Owned(buf),
-                })
-            }
-            "InitExecutionContext" => {
-                let value: Graph = deserialize(message.arg.as_ref())
-                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::init_execution_context(self, ctx, &value).await?;
-                let buf = serialize(&resp)?;
-                Ok(Message {
-                    method: "Mlinference.InitExecutionContext",
-                    arg: Cow::Owned(buf),
-                })
-            }
-            "SetInput" => {
-                let value: SetInputStruct = deserialize(message.arg.as_ref())
-                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::set_input(self, ctx, &value).await?;
-                let buf = serialize(&resp)?;
-                Ok(Message {
-                    method: "Mlinference.SetInput",
-                    arg: Cow::Owned(buf),
-                })
-            }
             "Compute" => {
-                let value: GraphExecutionContext = deserialize(message.arg.as_ref())
+                let value: InferenceRequest = deserialize(message.arg.as_ref())
                     .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
                 let resp = Mlinference::compute(self, ctx, &value).await?;
                 let buf = serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.Compute",
-                    arg: Cow::Owned(buf),
-                })
-            }
-            "GetOutput" => {
-                let value: GetOutputStruct = deserialize(message.arg.as_ref())
-                    .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::get_output(self, ctx, &value).await?;
-                let buf = serialize(&resp)?;
-                Ok(Message {
-                    method: "Mlinference.GetOutput",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -284,66 +160,8 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 #[async_trait]
 impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for MlinferenceSender<T> {
     #[allow(unused)]
-    /// load
-    async fn load(&self, ctx: &Context, arg: &LoadInput) -> RpcResult<LoadResult> {
-        let buf = serialize(arg)?;
-        let resp = self
-            .transport
-            .send(
-                ctx,
-                Message {
-                    method: "Mlinference.Load",
-                    arg: Cow::Borrowed(&buf),
-                },
-                None,
-            )
-            .await?;
-        let value = deserialize(&resp)
-            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Load", e)))?;
-        Ok(value)
-    }
-    #[allow(unused)]
-    /// init_execution_context
-    async fn init_execution_context(&self, ctx: &Context, arg: &Graph) -> RpcResult<IecResult> {
-        let buf = serialize(arg)?;
-        let resp = self
-            .transport
-            .send(
-                ctx,
-                Message {
-                    method: "Mlinference.InitExecutionContext",
-                    arg: Cow::Borrowed(&buf),
-                },
-                None,
-            )
-            .await?;
-        let value = deserialize(&resp).map_err(|e| {
-            RpcError::Deser(format!("response to {}: {}", "InitExecutionContext", e))
-        })?;
-        Ok(value)
-    }
-    #[allow(unused)]
-    /// set_input
-    async fn set_input(&self, ctx: &Context, arg: &SetInputStruct) -> RpcResult<BaseResult> {
-        let buf = serialize(arg)?;
-        let resp = self
-            .transport
-            .send(
-                ctx,
-                Message {
-                    method: "Mlinference.SetInput",
-                    arg: Cow::Borrowed(&buf),
-                },
-                None,
-            )
-            .await?;
-        let value = deserialize(&resp)
-            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "SetInput", e)))?;
-        Ok(value)
-    }
-    #[allow(unused)]
     /// compute
-    async fn compute(&self, ctx: &Context, arg: &GraphExecutionContext) -> RpcResult<BaseResult> {
+    async fn compute(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult> {
         let buf = serialize(arg)?;
         let resp = self
             .transport
@@ -358,25 +176,6 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             .await?;
         let value = deserialize(&resp)
             .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Compute", e)))?;
-        Ok(value)
-    }
-    #[allow(unused)]
-    /// get_output
-    async fn get_output(&self, ctx: &Context, arg: &GetOutputStruct) -> RpcResult<InferenceResult> {
-        let buf = serialize(arg)?;
-        let resp = self
-            .transport
-            .send(
-                ctx,
-                Message {
-                    method: "Mlinference.GetOutput",
-                    arg: Cow::Borrowed(&buf),
-                },
-                None,
-            )
-            .await?;
-        let value = deserialize(&resp)
-            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "GetOutput", e)))?;
         Ok(value)
     }
 }

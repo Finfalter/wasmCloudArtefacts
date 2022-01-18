@@ -20,4 +20,4 @@ rust_backtrace = "1"
 #link_name = "default"
 
 # name of contract under test
-contract_id = "wasmcloud:example:factorial"
+contract_id = "wasmcloud:example:mlinference"

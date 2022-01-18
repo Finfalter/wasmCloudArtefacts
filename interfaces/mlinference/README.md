@@ -1,4 +1,4 @@
-# Interface for the Factorial service, wasmcloud:example:factorial
+# Interface for the Mlinference service, wasmcloud:example:mlinfernce
 
 ## Build the Interface
 

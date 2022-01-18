@@ -8,14 +8,16 @@
     async-trait = "0.1"
     log = "0.4"
     wasmcloud_interface_mlinference = { path="../../interfaces/mlinference/rust" }
+    #wasmcloud-interface-factorial = "0.3"
     wasmbus-rpc = "0.6"
     serde = { version = "1.0" , features = ["derive"] }
-    ndarray           = "0.15"
-    tract-data        = "0.15.8"
-    tract-linalg      = "0.15.8"
-    tract-onnx        = { version = "0.15.8" }
+    #ndarray           = "0.15"
+    #tract-data        = "0.15.8"
+    #tract-linalg      = "0.15.8"
+    #tract-onnx        = { version = "0.15.8" }
     byteorder         = "1.4"
     thiserror         = "1.0"
+    tokio = { version = "1", features = ["full"] }
 
 # test dependencies
 [dev-dependencies]

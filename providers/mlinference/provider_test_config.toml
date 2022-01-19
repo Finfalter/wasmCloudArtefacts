@@ -21,3 +21,9 @@ rust_backtrace = "1"
 
 # name of contract under test
 contract_id = "wasmcloud:example:mlinference"
+
+values = { 
+    challenger = "enterprise.com/warpcore/1.1.0",
+    champion = "enterprise.com/warpcore/1.0.0",
+    flex = "enterprise.com/warpcore/1.2.0"
+    }

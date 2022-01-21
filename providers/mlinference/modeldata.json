@@ -1,0 +1,8 @@
+{
+    "lazy_load": true,
+    "models": {
+      "champion": "enterprise.com/warpcore/1.0.0",
+      "challenger" : "enterprise.com/warpcore/1.1.0",
+      "flex" : "enterprise.com/warpcore/1.2.0"
+    }
+  }

@@ -1,17 +1,13 @@
 //! mlinference capability provider
 //!
 
-//mod lib;
-//mod settings;
-
-
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 pub(crate) use wasmcloud_interface_mlinference::{
     Mlinference, MlinferenceReceiver, InferenceRequest, InferenceResult, Tensor
 };
-use mlinference::{load_settings, get_valid_status, ModelName, BindlePath};
+use mlinference::{load_settings, get_valid_status, drop_state, ModelZoo};
 use tokio::sync::RwLock;
-use log::{debug, info, error};  
+//use log::{debug, info, error};  
 
 use wasmbus_rpc::provider::prelude::*;
 
@@ -31,8 +27,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Default, Clone, Provider)]
 #[services(Mlinference)]
 struct MlinferenceProvider {
-    // map to store http server (and its link parameters) for each linked actor
-    actors: Arc<RwLock<HashMap<ModelName, BindlePath>>>,
+    /// map to store the assignments between the respective model 
+    /// and corresponding bindle path for each linked actor
+    actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
 }
 
 /// use default implementations of provider message handlers
@@ -40,26 +37,27 @@ impl ProviderDispatch for MlinferenceProvider {}
 
 #[async_trait]
 impl ProviderHandler for MlinferenceProvider {
-    /// Provider should perform any operations needed for a new link,
-    /// including setting up per-actor resources, and checking authorization.
-    /// If the link is allowed, return true, otherwise return false to deny the link.
-    /// This message is idempotent - provider must be able to handle
-    /// duplicates
-    #[allow(unused_variables)]
+
     async fn put_link(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
-        let settings =
-            load_settings(&ld.values).map_err(|e| RpcError::ProviderInit(e.to_string()))?;
+        let settings = load_settings(&ld.values).map_err(|e| RpcError::ProviderInit(e.to_string()))?;
+
+        let model_zoo: ModelZoo = settings.models.zoo;
+
+        let mut update_map = self.actors.write().await;
+        update_map.insert(ld.actor_id.to_string(), model_zoo);
 
         Ok(true)
     }
 
-    /// Notify the provider that the link is dropped
-    #[allow(unused_variables)]
-    async fn delete_link(&self, actor_id: &str) {}
-
-    /// Handle system shutdown message
-    async fn shutdown(&self) -> Result<(), Infallible> {
-        Ok(())
+    /// Handle notification that a link is dropped
+    /// remove the corresponding actor from the list
+    /// TODO__CB__ cleanup underlying resources 
+    async fn delete_link(&self, actor_id: &str) {
+        let mut aw = self.actors.write().await;
+        if let Some(models) = aw.remove(actor_id) {
+            // remove all state for this actor-link's pool
+            drop_state(models);
+        }
     }
 }
 

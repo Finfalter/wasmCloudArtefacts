@@ -1,7 +1,7 @@
 // mlinference.smithy
 
 // Tell the code generator how to reference symbols defined in this namespace
-metadata package = [ { namespace: "com.pervaisive.interfaces.mlinference", crate: "mlinference" } ]
+metadata package = [ { namespace: "com.example.interfaces.mlinference", crate: "mlinference" } ]
 
 namespace com.pervaisive.interfaces.mlinference
 

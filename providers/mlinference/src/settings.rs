@@ -1,127 +1,81 @@
-use crate::Error;
-use std::path::PathBuf;
-use std::{collections::HashMap};
 //use hashmap_ci::{make_case_insensitive};
-use serde::{de::Deserializer, de::Visitor, Deserialize, Serialize};
-
-macro_rules! merge {
-    ( $self:ident, $other: ident, $( $field:ident),+ ) => {
-        $(
-            if $other.$field.is_some() {
-                $self.$field = $other.$field;
-            }
-        )*
-    };
-}
+use std::{str::FromStr};
+use std::{collections::HashMap};
+use wasmbus_rpc::{RpcError};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ModelSettings {
+    /// model to path assignments
     #[serde(default)]
     pub models: Models,
+
+    /// loading models before first compute or at linkage
+    pub lazy_load: Option<bool>
 }
 
 impl Default for ModelSettings {
     fn default() -> ModelSettings {
         ModelSettings {
             models: Models::default(),
+            lazy_load: Some(false),
         }
     }
 }
 
 impl ModelSettings {
-    /// load Settings from a file with .toml or .json extension
-    fn from_file<P: Into<PathBuf>>(fpath: P) -> Result<Self, Error> {
-        let fpath: PathBuf = fpath.into();
-        let data = std::fs::read(&fpath)
-            .map_err(|e| Error::Settings(format!("reading file {}: {}", &fpath.display(), e)))?;
-        if let Some(ext) = fpath.extension() {
-            let ext = ext.to_string_lossy();
-            match ext.as_ref() {
-                "json" => ModelSettings::from_json(&data),
-                "toml" => ModelSettings::from_toml(&data),
-                _ => Err(Error::Settings(format!("unrecognized extension {}", ext))),
-            }
-        } else {
-            Err(Error::Settings(format!(
-                "unrecognized file type {}",
-                &fpath.display()
-            )))
-        }
-    }
-
-    /// load settings from json
-    fn from_json(data: &[u8]) -> Result<Self, Error> {
-        serde_json::from_slice(data).map_err(|e| Error::Settings(format!("invalid json: {}", e)))
-    }
-
-    /// load settings from toml file
-    fn from_toml(data: &[u8]) -> Result<Self, Error> {
-        toml::from_slice(data).map_err(Error::SettingsToml)
-    }
-
-    /// Merge settings from other into self
-    fn merge(&mut self, other: ModelSettings) {
-        //merge!(self, other, address);
-        //self.models.merge(other.models);
-    }
-
     /// perform additional validation checks on settings.
     /// Several checks have already been done during deserialization.
     /// All errors found are combined into a single error message
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> Result<(), RpcError> {
         Ok(())
     }
 }
 
-pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, Error> {
+pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, RpcError> {
     // Allow keys to be UPPERCASE, as an accommodation
     // for the lost souls who prefer ugly all-caps variable names.
-    let values = crate::make_case_insensitive(values).ok_or_else(|| Error::InvalidParameter(
+    let values = crate::make_case_insensitive(values).ok_or_else(|| RpcError::InvalidParameter(
         "Key collision: httpserver settings (from linkdef.values) has one or more keys that are not unique based on case-insensitivity"
             .to_string(),
     ))?;
 
     let mut settings = ModelSettings::default();
 
-    if let Some(fpath) = values.get("config_file") {
-        settings.merge(ModelSettings::from_file(fpath)?);
+    if let Some(cj) = values.get("config_b64") {
+        settings = serde_json::from_slice(
+            &base64::decode(cj)
+                .map_err(|_| RpcError::ProviderInit("invalid config_base64 encoding".into()))?,
+        )
+        .map_err(|e| RpcError::ProviderInit(format!("invalid json config: {}", e)))?;
     }
-
-    if let Some(str) = values.get("config_b64") {
-        let bytes = base64::decode(str.as_bytes())
-            .map_err(|e| Error::Settings(format!("invalid base64 encoding: {}", e)))?;
-        settings.merge(ModelSettings::from_json(&bytes)?);
+    if let Some(cj) = values.get("config_json") {
+        settings = serde_json::from_str(cj.as_str())
+            .map_err(|e| RpcError::ProviderInit(format!("invalid json config: {}", e)))?;
     }
-
-    if let Some(str) = values.get("config_json") {
-        settings.merge(ModelSettings::from_json(str.as_bytes())?);
+   
+    if let Some(lazy_load) = values.get("lazy_load") {
+        settings.lazy_load = FromStr::from_str(lazy_load).ok();
     }
-
-    // // accept address as value parameter
-    // if let Some(addr) = values.get("address") {
-    //     settings.address = Some(
-    //         SocketAddr::from_str(addr)
-    //             .map_err(|_| Error::InvalidParameter(format!("invalid address: {}", addr)))?,
-    //     );
-    // }
-
-    settings.validate()?;
-    Ok(settings)
+   
+    if settings.models.is_empty() {
+        Err(RpcError::ProviderInit(
+            "link params values are missing 'uri'".into(),
+        ))
+    } else {
+        settings.validate()?;
+        Ok(settings)
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Models {
-    pub models: HashMap<crate::ModelName, crate::BindlePath>
+    pub zoo: HashMap<crate::ModelName, crate::BindlePath>
 }
 
-// impl Models {
-//     fn merge(&mut self, other: Models) {
-//         merge!(self, other, cert_file, priv_key_file);
-//     }
-// }
+impl Models {
+    fn is_empty(&mut self) -> bool {
+        return self.zoo.is_empty();
+    }
+}
 
-// impl Models {
-//     pub fn is_set(&self) -> bool {
-//         self.cert_file.is_some() && self.priv_key_file.is_some()
-//     }
-//}

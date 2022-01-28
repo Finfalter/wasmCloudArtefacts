@@ -6,11 +6,11 @@ pub(crate) use wasmcloud_interface_mlinference::{
     Mlinference, MlinferenceReceiver, InferenceRequest, InferenceResult, Tensor
 };
 use wasmcloud_provider_mlinference::{
-    load_settings, get_valid_status, ModelZoo, ModelContext, ModelName, ModelMetadata,
-    get_first_member_of
+    load_settings, get_valid_status, ModelZoo, ModelContext, ModelMetadata,
+    get_first_member_of, MlState
 };
 use tokio::sync::RwLock;
-use bindle::{client, invoice};
+use bindle::{client};
 //use log::{debug, info, error};  
 
 use wasmbus_rpc::provider::prelude::*;
@@ -38,6 +38,7 @@ struct MlinferenceProvider {
     /// map to store the assignments between the respective model 
     /// and corresponding bindle path for each linked actor
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
+    ml_state: Arc<RwLock<MlState>>
 }
 
 /// use default implementations of provider message handlers
@@ -97,6 +98,12 @@ impl ProviderHandler for MlinferenceProvider {
                 ))?;
             log::info!("successfully downloaded model {} of size {}", model_parcel.label.name, model_data_blob.len());
 
+            
+
+
+
+
+
             let metadata_blob = bindle_client
                 .get_parcel(&context.bindle_url, &metadata_parcel.label.sha256)
                 .await
@@ -105,12 +112,11 @@ impl ProviderHandler for MlinferenceProvider {
                 ))?;
             log::info!("successfully downloaded metadata {} of size {}", metadata_parcel.label.name, metadata_blob.len());
 
+            // storing metadata makes sense when model data is done
             let metadata: ModelMetadata = ModelMetadata::from_json(&metadata_blob)
                 .map_err(|error| RpcError::ProviderInit(
                     format!("{}", error)
                 ))?;
-
-           
         }
         
 

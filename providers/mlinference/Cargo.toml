@@ -22,6 +22,9 @@
     toml = "0.5"
     serde_json = "1.0"
     bindle = "0.7.1"
+    tract-onnx        = { version = "0.15.8" }
+    tract-data        = "0.15.8"
+    tract-linalg      = "0.15.8"
 
 # test dependencies
 [dev-dependencies]

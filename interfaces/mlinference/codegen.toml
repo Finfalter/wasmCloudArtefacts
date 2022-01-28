@@ -66,4 +66,4 @@ output_dir = "rust"
 
 [[rust.files]]
 path = "src/mlinference.rs"
-namespace = "com.pervaisive.interfaces.mlinference"
+namespace = "com.example.interfaces.mlinference"

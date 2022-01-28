@@ -1,0 +1,34 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "identity_model"
+version = "0.2.0"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+description = "My first bindle"
+
+[annotations]
+myname = "myvalue"
+
+[[group]]
+name = "model"
+satisfiedBy = "allOf"
+required = true
+
+[[group]]
+name = "metadata"
+satisfiedBy = "allOf"
+required = true
+
+[[parcel]]
+label.sha256 = 'eb68abfa54af414a6aa8ce2f7554c0076ad3833149b4fb5d99538578213fffd9'
+label.mediaType = 'application/octet-stream'
+label.name = 'identity_input_output.onnx'
+label.size = 112
+conditions.memberOf = ["model"]
+
+[[parcel]]
+label.sha256 = 'a21f9949bc87bb2eaf8508872be52ed1b6aaf4b4f8d546ac8254777818c53b09'
+label.mediaType = 'application/json'
+label.name = 'identity_input_output.json'
+label.size = 189
+conditions.memberOf = ["metadata"]

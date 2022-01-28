@@ -1,0 +1,9 @@
+{
+	"model_name":"identity_input_output",
+	"graph_encoding":"ONNX",
+	"execution_target":"CPU",
+	"tensor_type":"F32",
+	"tensor_dimensions_in":[1, 2, 3],
+	"tensor_dimensions_out":[1, 2, 3]
+}
+

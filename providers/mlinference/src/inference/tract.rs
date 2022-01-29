@@ -1,6 +1,11 @@
 use async_trait::async_trait;
-use super::engine::InferenceEngine;
-use super::Graph;
+
+// use super::engine::InferenceEngine;
+// use super::Graph;
+
+use crate::inference::{
+    ExecutionTarget, Graph, GraphEncoding, 
+    GraphBuilder, InferenceEngine, InferenceResult};
 
 use tract_onnx::prelude::*;
 use tract_onnx::prelude::Tensor as TractTensor;
@@ -27,11 +32,17 @@ impl TractSession {
     }
 }
 
-struct IE {}
+pub struct TractEngine {}
 
 #[async_trait]
-impl InferenceEngine for IE {
-    async fn load(&self) -> super::IEResult<Graph> {
+impl InferenceEngine for TractEngine {
+    async fn load(
+        &self, 
+        builder: &GraphBuilder, 
+        encoding: GraphEncoding, 
+        target: ExecutionTarget
+    ) -> InferenceResult<Graph> 
+    {
         Ok(Graph(42))
     }
 }

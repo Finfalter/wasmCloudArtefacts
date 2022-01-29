@@ -4,13 +4,14 @@ use thiserror::Error as ThisError;
 use std::{
     collections::{HashMap},
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use wasmcloud_interface_mlinference::{ ResultStatus };
 
-// mod tract;
-// pub use tract::{Graph, GraphExecutionContext, MlState};
 mod inference;
-pub use inference::{Graph, GraphExecutionContext, MlState};
+pub use inference::{
+    ExecutionTarget,
+    Graph, GraphEncoding, GraphBuilder, GraphExecutionContext, 
+    TractEngine, ModelState, TensorType};
 
 mod metadata;
 pub use metadata::{ModelMetadata, get_first_member_of};
@@ -20,36 +21,6 @@ pub use settings::{load_settings, ModelSettings};
 
 mod hashmap_ci;
 pub (crate) use hashmap_ci::make_case_insensitive;
-
-/// GraphEncoding
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GraphEncoding(u8);
-
-impl GraphEncoding {
-    pub const GRAPH_ENCODING_OPENVINO: u8 = 0;
-    pub const GRAPH_ENCODING_ONNX:     u8 = 1;
-}
-
-/// ExecutionTarget
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct ExecutionTarget(u8);
-
-impl ExecutionTarget {
-    pub const EXECUTION_TARGET_CPU: u8 = 0;
-    pub const EXECUTION_TARGET_GPU: u8 = 1;
-    pub const EXECUTION_TARGET_TPU: u8 = 2;
-}
-
-/// TensorType
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TensorType(u8);
-
-impl TensorType {
-    pub const F16: u8 = 0;
-    pub const F32: u8 = 1;
-    pub const  U8: u8 = 2;
-    pub const I32: u8 = 3;
-}
 
 pub type BindlePath = String;
 pub type ModelName = String;
@@ -97,6 +68,10 @@ impl ModelContext {
 
         Ok(self)
     }
+
+    // pub fn somewhat(){
+    //     TractEngine.load(builder: &GraphBuilder, encoding: GraphEncoding, target: ExecutionTarget)
+    // }
 }
 
 /// generates a valid result

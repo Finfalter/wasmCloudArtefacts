@@ -2,12 +2,12 @@
 //!
 
 use std::{collections::HashMap, sync::Arc};
-pub(crate) use wasmcloud_interface_mlinference::{
+pub (crate) use wasmcloud_interface_mlinference::{
     Mlinference, MlinferenceReceiver, InferenceRequest, InferenceResult, Tensor
 };
 use wasmcloud_provider_mlinference::{
     load_settings, get_valid_status, ModelZoo, ModelContext, ModelMetadata,
-    get_first_member_of, MlState
+    get_first_member_of, ModelState
 };
 use tokio::sync::RwLock;
 use bindle::{client};
@@ -38,7 +38,7 @@ struct MlinferenceProvider {
     /// map to store the assignments between the respective model 
     /// and corresponding bindle path for each linked actor
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
-    ml_state: Arc<RwLock<MlState>>
+    ml_state: Arc<RwLock<ModelState>>
 }
 
 /// use default implementations of provider message handlers
@@ -90,7 +90,7 @@ impl ProviderHandler for MlinferenceProvider {
                     format!("The invoice must have >0 parcels being member of group 'metadata'")
                 ))?;
 
-            let model_data_blob = bindle_client
+            let model_data_blob: Vec<u8> = bindle_client
                 .get_parcel(&context.bindle_url, &model_parcel.label.sha256)
                 .await
                 .map_err(|_| RpcError::ProviderInit(
@@ -98,13 +98,7 @@ impl ProviderHandler for MlinferenceProvider {
                 ))?;
             log::info!("successfully downloaded model {} of size {}", model_parcel.label.name, model_data_blob.len());
 
-            
-
-
-
-
-
-            let metadata_blob = bindle_client
+            let metadata_blob: Vec<u8> = bindle_client
                 .get_parcel(&context.bindle_url, &metadata_parcel.label.sha256)
                 .await
                 .map_err(|_| RpcError::ProviderInit(
@@ -117,6 +111,8 @@ impl ProviderHandler for MlinferenceProvider {
                 .map_err(|error| RpcError::ProviderInit(
                     format!("{}", error)
                 ))?;
+
+            
         }
         
 

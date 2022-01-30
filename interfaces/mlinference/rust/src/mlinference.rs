@@ -65,8 +65,8 @@ pub trait Mlinference {
     fn contract_id() -> &'static str {
         "example:interfaces:mlinference"
     }
-    /// compute
-    async fn compute(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult>;
+    /// predict
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -76,13 +76,13 @@ pub trait Mlinference {
 pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
     async fn dispatch(&self, ctx: &Context, message: &Message<'_>) -> RpcResult<Message<'_>> {
         match message.method {
-            "Compute" => {
+            "Predict" => {
                 let value: InferenceRequest = deserialize(message.arg.as_ref())
                     .map_err(|e| RpcError::Deser(format!("message '{}': {}", message.method, e)))?;
-                let resp = Mlinference::compute(self, ctx, &value).await?;
+                let resp = Mlinference::predict(self, ctx, &value).await?;
                 let buf = serialize(&resp)?;
                 Ok(Message {
-                    method: "Mlinference.Compute",
+                    method: "Mlinference.Predict",
                     arg: Cow::Owned(buf),
                 })
             }
@@ -160,22 +160,22 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 #[async_trait]
 impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for MlinferenceSender<T> {
     #[allow(unused)]
-    /// compute
-    async fn compute(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult> {
+    /// predict
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult> {
         let buf = serialize(arg)?;
         let resp = self
             .transport
             .send(
                 ctx,
                 Message {
-                    method: "Mlinference.Compute",
+                    method: "Mlinference.Predict",
                     arg: Cow::Borrowed(&buf),
                 },
                 None,
             )
             .await?;
         let value = deserialize(&resp)
-            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Compute", e)))?;
+            .map_err(|e| RpcError::Deser(format!("response to {}: {}", "Predict", e)))?;
         Ok(value)
     }
 }

@@ -13,7 +13,7 @@ use org.wasmcloud.model#U32
 //! The Mlinference service issues inference requests via an inference engine.
 //! It exposes one method:
 //!
-//! - compute()
+//! - predict()
 
 /// The Mlinference service
 @wasmbus(
@@ -23,11 +23,11 @@ use org.wasmcloud.model#U32
 
 service Mlinference {
   version: "0.1",
-  operations: [ Compute ]
+  operations: [ Predict ]
 }
 
-/// compute
-operation Compute {
+/// predict
+operation Predict {
   input: InferenceRequest,
   output: InferenceResult
 }

@@ -3,11 +3,41 @@ pub use tract::{TractSession, TractEngine};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{collections::{btree_map::Keys, BTreeMap}};
+use std::{
+    collections::{btree_map::Keys, BTreeMap},
+    cmp::Ordering
+};
 
 /// Graph
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Graph(pub u32);
+
+impl From<u32> for Graph {
+    fn from(i: u32) -> Graph {
+        Graph(i)
+    }
+}
+
+impl From<Graph> for u32 {
+    fn from(g: Graph) -> u32 {
+        g.0
+    }
+}
+
+impl PartialOrd for Graph {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Graph {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let (s, o) = (*self, *other);
+        let s: u32 = s.into();
+        let o: u32 = o.into();
+        s.cmp(&o)
+    }
+}
 
 /// GraphEncoding
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -18,14 +48,39 @@ impl GraphEncoding {
     pub const GRAPH_ENCODING_ONNX:     u8 = 1;
 }
 
-/// GraphBuilder
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GraphBuilder(pub Vec<u8>);
+// /// GraphBuilder
+// #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+// pub struct GraphBuilder(pub Vec<u8>);
 
 /// GraphExecutionContext
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct GraphExecutionContext {
-    pub gec: u32,
+#[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GraphExecutionContext(u32);
+
+impl From<u32> for GraphExecutionContext {
+    fn from(i: u32) -> GraphExecutionContext {
+        GraphExecutionContext(i)
+    }
+}
+
+impl From<GraphExecutionContext> for u32 {
+    fn from(gec: GraphExecutionContext) -> u32 {
+        gec.0
+    }
+}
+
+impl PartialOrd for GraphExecutionContext {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for GraphExecutionContext {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let (s, o) = (*self, *other);
+        let s: u32 = s.into();
+        let o: u32 = o.into();
+        s.cmp(&o)
+    }
 }
 
 /// ExecutionTarget
@@ -71,7 +126,8 @@ impl ModelState {
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-    async fn load(&self, builder: &GraphBuilder, encoding: GraphEncoding, target: ExecutionTarget) -> InferenceResult<Graph>;
+    async fn load(&self, builder: &[u8], encoding: &GraphEncoding, target: &ExecutionTarget) -> InferenceResult<Graph>;
+    async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>;
 }
 
 /// InferenceResult

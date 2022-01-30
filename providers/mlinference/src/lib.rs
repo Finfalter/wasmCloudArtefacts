@@ -5,13 +5,13 @@ use std::{
     collections::{HashMap},
 };
 use serde::{Deserialize};
-use wasmcloud_interface_mlinference::{ ResultStatus };
+use wasmcloud_interface_mlinference::{ ResultStatus, MlError };
 
 mod inference;
 pub use inference::{
     ExecutionTarget,
-    Graph, GraphEncoding, GraphBuilder, GraphExecutionContext, 
-    TractEngine, ModelState, TensorType};
+    Graph, GraphEncoding, GraphExecutionContext, 
+    TractEngine, ModelState, TensorType, InferenceEngine};
 
 mod metadata;
 pub use metadata::{ModelMetadata, get_first_member_of};
@@ -30,6 +30,7 @@ pub type ModelZoo = HashMap<ModelName, ModelContext>;
 pub struct ModelContext {
     pub bindle_url: BindlePath,
     pub graph_encoding: GraphEncoding,
+    pub execution_target: ExecutionTarget,
     pub tensor_type: TensorType,
     pub session: GraphExecutionContext,
     pub graph: Graph
@@ -54,16 +55,13 @@ impl ModelContext {
             "I32" => Ok(TensorType(TensorType::I32)),
                _  => Err(()),
         }.map_err(|_| Error::InvalidParameter(format!("invalid 'tensor_type'")))?;
-
-      
-
-
-        // self.execution_target = match metadata.execution_target.as_str() {
-        //     "CPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_CPU)),
-        //     "GPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_GPU)),
-        //     "TPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_TPU)),
-        //        _  => Err(()),
-        // }.map_err(|_| Error::Settings(format!("invalid 'execution_target'")))?;
+ 
+        self.execution_target = match metadata.execution_target.as_str() {
+            "CPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_CPU)),
+            "GPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_GPU)),
+            "TPU" => Ok(ExecutionTarget(ExecutionTarget::EXECUTION_TARGET_TPU)),
+               _  => Err(()),
+        }.map_err(|_| Error::Settings(format!("invalid 'execution_target'")))?;
 
 
         Ok(self)
@@ -75,11 +73,18 @@ impl ModelContext {
 }
 
 /// generates a valid result
-/// TODO__CB__ could be some 'default'?
 pub fn get_valid_status() -> ResultStatus {
     ResultStatus {
         has_error: false,
         error: None
+    }
+}
+
+/// generates a default error
+pub fn get_error_status(e: MlError) -> ResultStatus {
+    ResultStatus {
+        has_error: true,
+        error: Some(e)
     }
 }
 

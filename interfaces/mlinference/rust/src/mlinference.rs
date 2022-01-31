@@ -12,19 +12,19 @@ use wasmbus_rpc::{
 
 pub const SMITHY_VERSION: &str = "1.0";
 
+/// InferenceOutput
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct InferenceOutput {
+    pub result: ResultStatus,
+    pub tensor: TensorOut,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct InferenceRequest {
     #[serde(default)]
     pub model: String,
     pub tensor: Tensor,
     pub index: u32,
-}
-
-/// InferenceResult
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct InferenceResult {
-    pub result: ResultStatus,
-    pub tensor: Tensor,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -47,6 +47,8 @@ pub struct ResultStatus {
 /// Any metadata shall be associated to the respective model in a blob store.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Tensor {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub buffer_size: Option<u64>,
     pub data: TensorData,
     pub dimensions: TensorDimensions,
 }
@@ -54,6 +56,13 @@ pub struct Tensor {
 pub type TensorData = Vec<u8>;
 
 pub type TensorDimensions = Vec<u32>;
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TensorOut {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub buffer_size: Option<u64>,
+    pub data: TensorData,
+}
 
 /// The Mlinference service
 /// wasmbus.contractId: example:interfaces:mlinference
@@ -66,7 +75,7 @@ pub trait Mlinference {
         "example:interfaces:mlinference"
     }
     /// predict
-    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult>;
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput>;
 }
 
 /// MlinferenceReceiver receives messages defined in the Mlinference service trait
@@ -161,7 +170,7 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for MlinferenceSender<T> {
     #[allow(unused)]
     /// predict
-    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult> {
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
         let buf = serialize(arg)?;
         let resp = self
             .transport

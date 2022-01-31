@@ -9,6 +9,7 @@ use org.wasmcloud.model#wasmbus
 use org.wasmcloud.model#n
 use org.wasmcloud.model#U8
 use org.wasmcloud.model#U32
+use org.wasmcloud.model#U64
 
 //! The Mlinference service issues inference requests via an inference engine.
 //! It exposes one method:
@@ -29,7 +30,7 @@ service Mlinference {
 /// predict
 operation Predict {
   input: InferenceRequest,
-  output: InferenceResult
+  output: InferenceOutput
 }
 
 structure InferenceRequest {
@@ -52,6 +53,8 @@ structure Tensor {
     @required
     dimensions: TensorDimensions,
 
+    buffer_size: U64,
+
     @required
     data: TensorData
 }
@@ -64,15 +67,22 @@ list TensorData {
   member: U8
 }
 
-/// InferenceResult
-structure InferenceResult {
+/// InferenceOutput
+structure InferenceOutput {
   @required
   @n(0)
   result: ResultStatus,
 
   @required
   @n(1)
-  tensor: Tensor
+  tensor: TensorOut
+}
+
+structure TensorOut {
+    buffer_size: U64,
+
+    @required
+    data: TensorData
 }
 
 structure ResultStatus {

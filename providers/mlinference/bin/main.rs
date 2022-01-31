@@ -3,11 +3,11 @@
 
 use std::{collections::HashMap, sync::Arc};
 pub (crate) use wasmcloud_interface_mlinference::{
-    Mlinference, MlinferenceReceiver, InferenceRequest, 
-    InferenceResult, Tensor, MlError
+    Mlinference, MlinferenceReceiver, InferenceRequest, InferenceOutput, 
+    MlError
 };
 use wasmcloud_provider_mlinference::{
-    load_settings, get_valid_status, get_error_status, ModelZoo, ModelContext, ModelMetadata,
+    load_settings, get_result_status, get_default_inference_result, ModelZoo, ModelContext, ModelMetadata,
     get_first_member_of, TractEngine, InferenceEngine, Graph, GraphExecutionContext
 };
 use tokio::sync::RwLock;
@@ -137,8 +137,8 @@ impl ProviderHandler for MlinferenceProvider {
             context.session = gec;
         }
 
-        let mut update_map = self.actors.write().await;
-        update_map.insert(ld.actor_id.to_string(), model_zoo);
+        let mut actor_lock = self.actors.write().await;
+        actor_lock.insert(ld.actor_id.to_string(), model_zoo);
 
         Ok(true)
     }
@@ -160,24 +160,37 @@ impl ProviderHandler for MlinferenceProvider {
 #[async_trait]
 impl Mlinference for MlinferenceProvider {
     /// predict
-    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceResult> {
-        let mut ir = InferenceResult {
-            result: get_valid_status(),
-            tensor: Tensor {
-                data: vec![],
-                dimensions: vec![]
-            }
-        };
-
-
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
+      
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None    => {
-                ir.result = get_error_status(MlError{model_error: 0});
+                let ir = get_default_inference_result(Some(MlError{model_error: 0}));
                 return Ok(ir);
             }
         }.to_string();
 
-        Ok(ir)
+        let model = arg.model.clone();
+
+        let tensor_in = arg.tensor.clone();
+
+        let index = arg.index;
+
+        let actor_access = self.actors.read().await;
+
+        let modelzoo: ModelZoo = match actor_access.get(&actor) {
+            Some(v) => v,
+            None    => {
+                let ir = get_default_inference_result(Some(MlError{model_error: 1}));
+                return Ok(ir);
+            }
+        };
+
+        // TODO__CB__: refactor MlError 
+        //self.engine.set_input(modelzoo.);
+
+        
+
+        Ok(get_default_inference_result(None))
     }
 }

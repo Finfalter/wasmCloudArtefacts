@@ -1,6 +1,8 @@
 mod tract;
 pub use tract::{TractSession, TractEngine};
 
+use wasmcloud_interface_mlinference::{ Tensor, TensorOut, InferenceOutput };
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -128,6 +130,15 @@ impl ModelState {
 pub trait InferenceEngine {
     async fn load(&self, builder: &[u8], encoding: &GraphEncoding, target: &ExecutionTarget) -> InferenceResult<Graph>;
     async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>;
+    async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()>;
+    async fn compute(&  self, context: GraphExecutionContext) -> InferenceResult<()>;
+    async fn get_output(
+        &self,
+        context: GraphExecutionContext,
+        index: u32,
+        out_buffer: Vec<u8>,
+        out_buffer_max_size: usize,
+    ) -> InferenceResult<InferenceOutput>;
 }
 
 /// InferenceResult
@@ -143,4 +154,16 @@ pub enum InferenceError {
 
     #[error("Invalid encoding")]
     InvalidEncodingError,
+
+    #[error("Corrupt input tensor")]
+    CorruptInputTensor,
+
+    #[error("model reshape failed")]
+    ShapeError(#[from] ndarray::ShapeError),
+
+    #[error("Bytes to f32 vec conversion failed")]
+    BytesToVecConversionError(#[from] std::io::Error),
+
+    #[error("Configuration of model's input type and/or shape failed")]
+    CorruptInputTypeOrShape(#[from] tract_onnx::tract_core::anyhow::Error)
 }

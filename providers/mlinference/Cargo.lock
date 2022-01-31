@@ -1756,6 +1756,7 @@ dependencies = [
  "bindle",
  "byteorder",
  "log",
+ "ndarray",
  "serde",
  "serde_json",
  "thiserror",

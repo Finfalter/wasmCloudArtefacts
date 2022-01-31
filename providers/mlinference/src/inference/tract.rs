@@ -7,6 +7,11 @@ use crate::inference::{
     ExecutionTarget, Graph, GraphEncoding, GraphExecutionContext,
     InferenceEngine, InferenceError, InferenceResult, ModelState};
 
+use wasmcloud_interface_mlinference::{ Tensor, TensorOut, InferenceOutput, ResultStatus };
+
+use byteorder::{LittleEndian, ReadBytesExt};
+
+use ndarray::Array;
 use tract_onnx::prelude::*;
 use tract_onnx::prelude::Tensor as TractTensor;
 use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
@@ -41,10 +46,12 @@ impl InferenceEngine for TractEngine {
         builder: &[u8],
         encoding: &GraphEncoding,
         target: &ExecutionTarget,
-    ) -> InferenceResult<Graph> {
+    ) -> InferenceResult<Graph> 
+    {
         log::info!("load: encoding: {:#?}, target: {:#?}", encoding, target);
 
-        if encoding != &GraphEncoding(GraphEncoding::GRAPH_ENCODING_ONNX) {
+        if encoding != &GraphEncoding(GraphEncoding::GRAPH_ENCODING_ONNX) 
+        {
             log::error!("load current implementation can only load ONNX models");
             return Err(InferenceError::InvalidEncodingError);
         }
@@ -70,7 +77,8 @@ impl InferenceEngine for TractEngine {
         log::info!("init_execution_context: graph: {:#?}", graph);
 
         let mut state = self.state.write().await;
-        let mut model_bytes = match state.models.get(&graph) {
+        let mut model_bytes = match state.models.get(&graph) 
+        {
             Some(mb) => Cursor::new(mb),
             None => {
                 log::error!(
@@ -95,4 +103,197 @@ impl InferenceEngine for TractEngine {
 
         Ok(gec)
     }
+
+    /// set_input
+    async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()> 
+    {
+        let mut state = self.state.write().await;
+        let execution = match state.executions.get_mut(&context) {
+            Some(s) => s,
+            None => {
+                log::error!(
+                    "set_input: cannot find session in state with context {:#?}",
+                    context
+                );
+
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        let shape = tensor
+            .dimensions
+            .iter()
+            .map(|d| *d as usize)
+            .collect::<Vec<_>>();
+
+        execution.graph.set_input_fact(
+            index as usize,
+            InferenceFact::dt_shape(f32::datum_type(), shape.clone()))?;
+        
+        let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
+        let input: TractTensor = Array::from_shape_vec(shape, data)?.into();
+
+        match execution.input_tensors {
+            Some(ref mut input_arrays) => {
+                input_arrays.push(input);
+                log::info!(
+                    "set_input: input arrays now contains {} items",
+                    input_arrays.len(),
+                );
+            }
+            None => {
+                execution.input_tensors = Some(vec![input]);
+            }
+        };
+
+        Ok(())
+    }
+
+    /// compute()
+    async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
+    {
+        let mut state = self.state.write().await;
+        let mut execution = match state.executions.get_mut(&context) {
+            Some(s) => s,
+            None => {
+                log::error!(
+                    "compute: cannot find session in state with context {:#?}",
+                    context
+                );
+
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        // TODO
+        //
+        // There are two `.clone()` calls here that could prove
+        // to be *very* inneficient, one in getting the input tensors,
+        // the other in making the model runnable.
+        let input_tensors: Vec<TractTensor> = execution
+            .input_tensors
+            .as_ref()
+            .unwrap_or(&vec![])
+            .clone()
+            .into_iter()
+            .collect();
+
+        log::info!(
+            "compute: input tensors contains {} elements",
+            input_tensors.len()
+        );
+
+        // Some ONNX models don't specify their input tensor
+        // shapes completely, so we can only call `.into_optimized()` after we
+        // have set the input tensor shapes.
+        let output_tensors = execution
+            .graph
+            .clone()
+            .into_optimized()?
+            .into_runnable()?
+            .run(input_tensors.into())?;
+
+        log::info!(
+            "compute: output tensors contains {} elements",
+            output_tensors.len()
+        );
+        match execution.output_tensors {
+            Some(_) => {
+                log::error!("compute: existing data in output_tensors, aborting");
+                return Err(InferenceError::RuntimeError);
+            }
+            None => {
+                execution.output_tensors = Some(output_tensors.into_iter().collect());
+            }
+        };
+
+        Ok(())
+    }
+
+    /// get_output
+    async fn get_output(
+        &self,
+        context: GraphExecutionContext,
+        index: u32,
+        out_buffer: Vec<u8>,
+        out_buffer_max_size: usize,
+    ) -> InferenceResult<InferenceOutput> 
+    {
+        let state = self.state.read().await;
+        let execution = match state.executions.get(&context) {
+            Some(s) => s,
+            None => {
+                log::error!(
+                    "compute: cannot find session in state with context {:#?}",
+                    context
+                );
+
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        let output_tensors = match execution.output_tensors {
+            Some(ref oa) => oa,
+            None         => {
+                log::error!("get_output: output_tensors for session is none. Perhaps you haven't called compute yet?");
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        let tensor = match output_tensors.get(index as usize) {
+            Some(a) => a,
+            None    => {
+                log::error!(
+                    "get_output: output_tensors does not contain index {}",
+                    index
+                );
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
+        let size = bytes.len();
+
+        let io = InferenceOutput {
+            result: ResultStatus { has_error: false, error: None },
+            tensor: TensorOut {
+                buffer_size: Some(size as u64),
+                data: bytes
+            }
+        };
+
+        Ok(io)
+    }
+}
+
+pub type Result<T> = std::io::Result<T>;
+
+pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+    let chunks: Vec<&[u8]> = data.chunks(4).collect();
+    let v: Vec<Result<f32>> = chunks
+        .into_iter()
+        .map(|c| {
+            let mut rdr = Cursor::new(c);
+            Ok(rdr.read_f32::<LittleEndian>()?)
+        })
+        .collect();
+
+    v.into_iter().collect()
+}
+
+pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+    let sum: f32 = data.iter().sum();
+    log::info!(
+        "f32_vec_to_bytes: flatten output tensor contains {} elements with sum {}",
+        data.len(),
+        sum
+    );
+    let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
+    let result: Vec<u8> = chunks.iter().flatten().copied().collect();
+
+    log::info!(
+        "f32_vec_to_bytes: flatten byte output tensor contains {} elements",
+        result.len()
+    );
+    result
 }

@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap},
 };
 use serde::{Deserialize};
-use wasmcloud_interface_mlinference::{ ResultStatus, MlError };
+use wasmcloud_interface_mlinference::{ ResultStatus, MlError, InferenceOutput, TensorOut };
 
 mod inference;
 pub use inference::{
@@ -72,19 +72,24 @@ impl ModelContext {
     // }
 }
 
-/// generates a valid result
-pub fn get_valid_status() -> ResultStatus {
+/// generates an error default ResultStatus
+pub fn get_result_status(ml_error_option: Option<MlError>) -> ResultStatus {
+    let with_error = ml_error_option.is_some();
+    
     ResultStatus {
-        has_error: false,
-        error: None
+        has_error: with_error,
+        error: ml_error_option
     }
 }
 
-/// generates a default error
-pub fn get_error_status(e: MlError) -> ResultStatus {
-    ResultStatus {
-        has_error: true,
-        error: Some(e)
+/// generates an error default ResultStatus
+pub fn get_default_inference_result(ml_error: Option<MlError>) -> InferenceOutput {
+    InferenceOutput {
+        result: get_result_status(ml_error),
+        tensor: TensorOut {
+            buffer_size: Some(0),
+            data: vec![],
+        }
     }
 }
 

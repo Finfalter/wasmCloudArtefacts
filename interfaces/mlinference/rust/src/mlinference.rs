@@ -29,8 +29,7 @@ pub struct InferenceRequest {
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MlError {
-    #[serde(rename = "modelError")]
-    pub model_error: u8,
+    pub err: u8,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

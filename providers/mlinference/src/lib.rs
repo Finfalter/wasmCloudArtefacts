@@ -32,7 +32,7 @@ pub struct ModelContext {
     pub graph_encoding: GraphEncoding,
     pub execution_target: ExecutionTarget,
     pub tensor_type: TensorType,
-    pub session: GraphExecutionContext,
+    pub graph_execution_context: GraphExecutionContext,
     pub graph: Graph
 }
 

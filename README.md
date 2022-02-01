@@ -10,7 +10,7 @@ This repository provides a [wasmCloud](https://wasmcloud.dev/) capability provid
 - [x] dummy version of Inference Engine capability provider (IE) able to download things from a bindle server
 - [ ] tests
 - [x] modification and integration of former WASI NN *like* functionality
-- [ ] dummy version of Inference Engine capability provider (IE) implementing the contract between IE and I
+- [x] dummy version of Inference Engine capability provider (IE) implementing the contract between IE and I
 - [ ] tests
 - [ ] Inference Actor
 - [ ] API Actor

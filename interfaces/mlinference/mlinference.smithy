@@ -141,5 +141,5 @@ structure MlError {
     },
   ])
   @required
-  modelError: U8
+  err: U8
 }

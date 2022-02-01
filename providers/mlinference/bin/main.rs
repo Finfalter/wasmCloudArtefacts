@@ -7,7 +7,7 @@ pub (crate) use wasmcloud_interface_mlinference::{
     MlError
 };
 use wasmcloud_provider_mlinference::{
-    load_settings, get_result_status, get_default_inference_result, ModelZoo, ModelContext, ModelMetadata,
+    load_settings, get_default_inference_result, ModelZoo, ModelContext, ModelMetadata,
     get_first_member_of, TractEngine, InferenceEngine, Graph, GraphExecutionContext
 };
 use tokio::sync::RwLock;
@@ -51,7 +51,6 @@ impl ProviderHandler for MlinferenceProvider {
     async fn put_link(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         let settings = load_settings(&ld.values).map_err(|e| RpcError::ProviderInit(e.to_string()))?;
 
-        //let model_zoo: ModelZoo = settings.models.zoo;
         let mut model_zoo: ModelZoo = ModelZoo::new();
         
         settings.models.zoo.iter().for_each(|(k,v)| {
@@ -134,7 +133,7 @@ impl ProviderHandler for MlinferenceProvider {
                     format!("{}", error)
                 ))?;
 
-            context.session = gec;
+            context.graph_execution_context = gec;
         }
 
         let mut actor_lock = self.actors.write().await;
@@ -144,14 +143,21 @@ impl ProviderHandler for MlinferenceProvider {
     }
 
     /// Handle notification that a link is dropped
-    /// remove the corresponding actor from the list
-    /// TODO__CB__ cleanup underlying resources 
-    async fn delete_link(&self, actor_id: &str) {
+    async fn delete_link(&self, actor_id: &str) 
+    {
         let mut aw = self.actors.write().await;
-        if let Some(models) = aw.remove(actor_id) {
-            // remove all state for this actor-link's pool
-            //drop_state(models);
+
+        let model_zoo: &ModelZoo = match aw.get(actor_id) {
+            Some(mz) => mz,
+            None     => { return(); }
+        };
+
+        for (_, context) in model_zoo.iter() 
+        {
+            self.engine.drop_model_state(&context.graph, &context.graph_execution_context).await;
         }
+
+        aw.remove(actor_id);
     }
 }
 
@@ -160,37 +166,55 @@ impl ProviderHandler for MlinferenceProvider {
 #[async_trait]
 impl Mlinference for MlinferenceProvider {
     /// predict
-    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
-      
+    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> 
+    {  
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None    => {
-                let ir = get_default_inference_result(Some(MlError{model_error: 0}));
+                let ir = get_default_inference_result(Some(MlError{err: 3}));
                 return Ok(ir);
             }
         }.to_string();
 
-        let model = arg.model.clone();
+        let model_name = &arg.model;
 
-        let tensor_in = arg.tensor.clone();
+        let tensor_in = &arg.tensor;
 
         let index = arg.index;
 
-        let actor_access = self.actors.read().await;
+        let ar = self.actors.read().await;
 
-        let modelzoo: ModelZoo = match actor_access.get(&actor) {
+        let modelzoo: &ModelZoo = match ar.get(&actor) {
             Some(v) => v,
             None    => {
-                let ir = get_default_inference_result(Some(MlError{model_error: 1}));
+                let ir = get_default_inference_result(Some(MlError{err: 6}));
                 return Ok(ir);
             }
         };
 
-        // TODO__CB__: refactor MlError 
-        //self.engine.set_input(modelzoo.);
+        let model_context: &ModelContext = match modelzoo.get(model_name) {
+            Some(m) => m,
+            None    => {
+                let ir = get_default_inference_result(Some(MlError{err: 6}));
+                return Ok(ir);
+            }
+        };
 
-        
+        match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
+            Ok(_)    => {},
+            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+        }
 
-        Ok(get_default_inference_result(None))
+        match self.engine.compute(model_context.graph_execution_context).await {
+            Ok(_)    => {},
+            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+        }
+
+        let result = match self.engine.get_output(model_context.graph_execution_context, index).await {
+            Ok(r)    => r,
+            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+        };
+
+        Ok(result)
     }
 }

@@ -214,9 +214,7 @@ impl InferenceEngine for TractEngine {
     async fn get_output(
         &self,
         context: GraphExecutionContext,
-        index: u32,
-        out_buffer: Vec<u8>,
-        out_buffer_max_size: usize,
+        index: u32
     ) -> InferenceResult<InferenceOutput> 
     {
         let state = self.state.read().await;
@@ -263,6 +261,15 @@ impl InferenceEngine for TractEngine {
         };
 
         Ok(io)
+    }
+
+    /// remove model state
+    async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext) 
+    {
+        let mut state = self.state.write().await;
+
+        state.models.remove(graph);
+        state.executions.remove(gec);
     }
 }
 

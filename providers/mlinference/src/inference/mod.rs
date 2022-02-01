@@ -1,7 +1,7 @@
 mod tract;
 pub use tract::{TractSession, TractEngine};
 
-use wasmcloud_interface_mlinference::{ Tensor, TensorOut, InferenceOutput };
+use wasmcloud_interface_mlinference::{ Tensor, InferenceOutput };
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -108,8 +108,8 @@ impl TensorType {
 
 #[derive(Default)]
 pub struct ModelState {
-    pub executions: BTreeMap<GraphExecutionContext, TractSession>,
-    pub models: BTreeMap<Graph, Vec<u8>>,
+    executions: BTreeMap<GraphExecutionContext, TractSession>,
+    models: BTreeMap<Graph, Vec<u8>>,
 }
 
 impl ModelState {
@@ -131,14 +131,13 @@ pub trait InferenceEngine {
     async fn load(&self, builder: &[u8], encoding: &GraphEncoding, target: &ExecutionTarget) -> InferenceResult<Graph>;
     async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>;
     async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()>;
-    async fn compute(&  self, context: GraphExecutionContext) -> InferenceResult<()>;
+    async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()>;
     async fn get_output(
         &self,
         context: GraphExecutionContext,
-        index: u32,
-        out_buffer: Vec<u8>,
-        out_buffer_max_size: usize,
+        index: u32
     ) -> InferenceResult<InferenceOutput>;
+    async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
 }
 
 /// InferenceResult

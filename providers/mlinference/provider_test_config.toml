@@ -25,8 +25,4 @@ contract_id = "wasmcloud:example:mlinference"
 # values here will be passed as config_b64
 [values]
 lazy_load = false
-models = { 
-    challenger = "enterprise.com/warpcore/1.1.0",
-    champion = "enterprise.com/warpcore/1.0.0",
-    flex = "enterprise.com/warpcore/1.2.0"
-}
+models = {zoo = { challenger = "enterprise.com/warpcore/1.1.0", champion = "enterprise.com/warpcore/1.0.0", flex = "enterprise.com/warpcore/1.2.0"}}

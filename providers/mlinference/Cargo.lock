@@ -92,6 +92,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compression"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2bf394cfbbe876f0ac67b13b6ca819f9c9f2fb9ec67223cceb1555fbab1c31a"
+dependencies = [
+ "flate2",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "async-task"
 version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -246,11 +259,12 @@ dependencies = [
 
 [[package]]
 name = "bindle"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c8678c4c6eec0ff22bc9bd7e015b8a3775b38fce80573ce677c486001a31ff"
+checksum = "aefcdee8421fe9cb679bd5ec175a7d8e0bbaebdb1d950b26eb0118a5abed27cb"
 dependencies = [
  "anyhow",
+ "async-compression",
  "async-trait",
  "base64",
  "bcrypt",
@@ -280,6 +294,7 @@ dependencies = [
  "time 0.3.7",
  "tokio",
  "tokio-stream",
+ "tokio-tar",
  "tokio-util",
  "toml",
  "tracing",
@@ -3486,6 +3501,21 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+]
+
+[[package]]
+name = "tokio-tar"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a50188549787c32c1c3d9c8c71ad7e003ccf2f102489c5a96e385c84760477f4"
+dependencies = [
+ "filetime",
+ "futures-core",
+ "libc",
+ "redox_syscall",
+ "tokio",
+ "tokio-stream",
+ "xattr",
 ]
 
 [[package]]

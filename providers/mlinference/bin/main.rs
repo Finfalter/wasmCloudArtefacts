@@ -8,8 +8,7 @@ pub (crate) use wasmcloud_interface_mlinference::{
 };
 use wasmcloud_provider_mlinference::{
     load_settings, get_default_inference_result, ModelZoo, ModelContext,
-    TractEngine, InferenceEngine, Graph, GraphExecutionContext,
-    BindleLoader
+    TractEngine, InferenceEngine, Graph, GraphExecutionContext, BindleLoader
 };
 use tokio::sync::RwLock;
 use bindle::{client::{Client, tokens::NoToken}};
@@ -171,5 +170,37 @@ impl Mlinference for MlinferenceProvider {
         };
 
         Ok(result)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    
+    // use std::{collections::HashMap};
+    // use wasmbus_rpc::core::{LinkDefinition, LinkSettings};
+    // use crate::MlinferenceProvider;
+    // use wasmbus_rpc::provider::ProviderHandler;
+
+    #[test]
+    fn it_works() {
+
+        // let x: LinkSettings = HashMap::from([
+        //     (String::from("flex"), String::from("enterprise.com/warpcore/1.2.0")),
+        //     (String::from("champion"), String::from("enterprise.com/warpcore/1.0.0")),
+        //     (String::from("challenger"), String::from("enterprise.com/warpcore/1.1.0")),
+        // ]);
+    
+        // let link_definitions: LinkDefinition = LinkDefinition {
+        //     actor_id: "123".to_string(),
+        //     provider_id: "whatever".to_string(),
+        //     link_name: "whatever".to_string(),
+        //     contract_id: "unimportant".to_string(),
+        //     values: x
+        // };
+
+        // MlinferenceProvider.put_link(link_definitions);
+
+        assert_eq!(2 + 2, 4);
     }
 }

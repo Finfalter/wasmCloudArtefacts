@@ -1,5 +1,5 @@
 use wasmbus_rpc::provider::prelude::*;
-use wasmcloud_interface_factorial::*;
+use wasmcloud_interface_mlinference::*;
 use wasmcloud_test_util::{
     check,
     cli::print_test_results,
@@ -12,7 +12,7 @@ use wasmcloud_test_util::{run_selected, run_selected_spawn};
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
-    let res = run_selected_spawn!(&opts, health_check, factorial_0_1, factorial_more);
+    let res = run_selected_spawn!(&opts, health_check, test_one);
     print_test_results(&res);
 
     let passed = res.iter().filter(|tr| tr.passed).count();
@@ -34,39 +34,46 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     Ok(())
 }
 
-/// tests of the Mlinference capability
-async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {
-    let prov = test_provider().await;
+// /// tests of the Mlinference capability
+// async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {
+//     let prov = test_provider().await;
 
-    // create client and ctx
-    let client = MlinferenceSender::via(prov);
-    let ctx = Context::default();
+//     // create client and ctx
+//     let client = MlinferenceSender::via(prov);
+//     let ctx = Context::default();
 
-    let resp = client.calculate(&ctx, &0).await?;
-    assert_eq!(resp, 1, "0!");
+//     let resp = client.calculate(&ctx, &0).await?;
+//     assert_eq!(resp, 1, "0!");
 
-    let resp = client.calculate(&ctx, &1).await?;
-    assert_eq!(resp, 1, "1!");
+//     let resp = client.calculate(&ctx, &1).await?;
+//     assert_eq!(resp, 1, "1!");
 
-    Ok(())
-}
+//     Ok(())
+// }
+
+// /// more tests of the Mlinference interface
+// async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
+//     let prov = test_provider().await;
+
+//     // create client and ctx
+//     let client = MlinferenceSender::via(prov);
+//     let ctx = Context::default();
+
+//     let resp = client.calculate(&ctx, &2).await?;
+//     assert_eq!(resp, 2, "2!");
+
+//     let resp = client.calculate(&ctx, &3).await?;
+//     assert_eq!(resp, 6, "3!");
+
+//     let resp = client.calculate(&ctx, &4).await?;
+//     assert_eq!(resp, 24, "4!");
+
+//     Ok(())
+// }
 
 /// more tests of the Mlinference interface
-async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
-    let prov = test_provider().await;
+async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
+    let _prov = test_provider().await;
 
-    // create client and ctx
-    let client = MlinferenceSender::via(prov);
-    let ctx = Context::default();
-
-    let resp = client.calculate(&ctx, &2).await?;
-    assert_eq!(resp, 2, "2!");
-
-    let resp = client.calculate(&ctx, &3).await?;
-    assert_eq!(resp, 6, "3!");
-
-    let resp = client.calculate(&ctx, &4).await?;
-    assert_eq!(resp, 24, "4!");
-
-    Ok(())
+   Ok(())
 }

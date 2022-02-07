@@ -38,7 +38,7 @@ struct MlinferenceProvider {
     /// map to store the assignments between the respective model 
     /// and corresponding bindle path for each linked actor
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
-    engine: TractEngine
+    engine: TractEngine // could be arc of box of enum or
 }
 
 /// use default implementations of provider message handlers
@@ -61,21 +61,25 @@ impl ProviderHandler for MlinferenceProvider {
                 ..Default::default() 
             });
         });
-        
+
         let bindle_client: Client<NoToken> = BindleLoader::provide("BINDLE_URL")
             .await
             .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
         for (_, context) in model_zoo.iter_mut() 
-        {
+        {           
             let downloads = BindleLoader::get_model_and_metadata(&bindle_client, &context.bindle_url)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
             let (metadata, model_data_bytes) = downloads;
 
-            context.clone().load_metadata(metadata)
-                .map_err(|e| RpcError::InvalidParameter(format!("{:?}",e)))?;
+            log::debug!("metadata to {:?}", &metadata);
+
+            context.load_metadata(metadata)
+            .map_err(|e| RpcError::InvalidParameter(format!("{:?}",e)))?;
+
+            log::debug!("==============> 'context' filled with {:?}", &context);
 
             let graph: Graph = self.engine.load(&model_data_bytes, &context.graph_encoding, &context.execution_target)
                 .await
@@ -103,7 +107,7 @@ impl ProviderHandler for MlinferenceProvider {
 
         let model_zoo: &ModelZoo = match actor_lock.get(actor_id) {
             Some(mz) => mz,
-            None     => { return(); }
+            None     => { return; }
         };
 
         for (_, context) in model_zoo.iter() 
@@ -122,6 +126,8 @@ impl Mlinference for MlinferenceProvider {
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> 
     {  
+        log::debug!("predict() ==============>");
+        
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None    => {
@@ -168,39 +174,39 @@ impl Mlinference for MlinferenceProvider {
             Ok(r)    => r,
             Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
         };
-
+        log::debug!("==============> predict()");
         Ok(result)
     }
 }
 
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
     
-    // use std::{collections::HashMap};
-    // use wasmbus_rpc::core::{LinkDefinition, LinkSettings};
-    // use crate::MlinferenceProvider;
-    // use wasmbus_rpc::provider::ProviderHandler;
+//     // use std::{collections::HashMap};
+//     // use wasmbus_rpc::core::{LinkDefinition, LinkSettings};
+//     // use crate::MlinferenceProvider;
+//     // use wasmbus_rpc::provider::ProviderHandler;
 
-    #[test]
-    fn it_works() {
+//     #[test]
+//     fn it_works() {
 
-        // let x: LinkSettings = HashMap::from([
-        //     (String::from("flex"), String::from("enterprise.com/warpcore/1.2.0")),
-        //     (String::from("champion"), String::from("enterprise.com/warpcore/1.0.0")),
-        //     (String::from("challenger"), String::from("enterprise.com/warpcore/1.1.0")),
-        // ]);
+//         // let x: LinkSettings = HashMap::from([
+//         //     (String::from("flex"), String::from("enterprise.com/warpcore/1.2.0")),
+//         //     (String::from("champion"), String::from("enterprise.com/warpcore/1.0.0")),
+//         //     (String::from("challenger"), String::from("enterprise.com/warpcore/1.1.0")),
+//         // ]);
     
-        // let link_definitions: LinkDefinition = LinkDefinition {
-        //     actor_id: "123".to_string(),
-        //     provider_id: "whatever".to_string(),
-        //     link_name: "whatever".to_string(),
-        //     contract_id: "unimportant".to_string(),
-        //     values: x
-        // };
+//         // let link_definitions: LinkDefinition = LinkDefinition {
+//         //     actor_id: "123".to_string(),
+//         //     provider_id: "whatever".to_string(),
+//         //     link_name: "whatever".to_string(),
+//         //     contract_id: "unimportant".to_string(),
+//         //     values: x
+//         // };
 
-        // MlinferenceProvider.put_link(link_definitions);
+//         // MlinferenceProvider.put_link(link_definitions);
 
-        assert_eq!(2 + 2, 4);
-    }
-}
+//         //assert_eq!(2 + 2, 4);
+//     }
+// }

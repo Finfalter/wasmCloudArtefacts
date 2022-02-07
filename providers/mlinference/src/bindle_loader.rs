@@ -1,4 +1,4 @@
-use crate::{BindlePath};
+//use crate::{BindlePath};
 use thiserror::Error as ThisError;
 use serde::{Deserialize, Serialize};
 use bindle::{client::{Client, tokens::NoToken}};
@@ -61,18 +61,14 @@ impl BindleLoader {
     }
 
     /// get model and metadata
-    pub async fn get_model_and_metadata(bindle_client: &Client<NoToken>, bindle_url: &BindlePath) 
+    pub async fn get_model_and_metadata(bindle_client: &Client<NoToken>, bindle_url: &str) 
     -> BindleResult<(ModelMetadata, Vec<u8>)> 
-    {
+    {     
         let invoice = bindle_client.get_invoice(bindle_url).await
-            .map_err(|_| BindleError::BindleInvoiceNotFoundError(
-                format!("{}", bindle_url)
-            ))?;
+            .map_err(|_| BindleError::BindleInvoiceNotFoundError(bindle_url.to_string()))?;
 
-        let parcels = invoice.parcel.ok_or(
-            BindleError::BindleParcelNotFoundError(
-                format!("{}", bindle_url)
-            ))?;
+        let parcels = invoice.parcel
+            .ok_or_else(|| BindleError::BindleParcelNotFoundError(bindle_url.to_string()))?;
 
         let model_parcel = BindleLoader::get_first_member_of(&parcels, "model")
             .map_err(|_| BindleError::BindleNoParcelOfGroupModelError)?;    
@@ -83,19 +79,15 @@ impl BindleLoader {
         let model_data_blob: Vec<u8> = bindle_client
             .get_parcel(bindle_url, &model_parcel.label.sha256)
             .await
-            .map_err(|_| BindleError::BindleParcelNotFetchedError(
-                format!("{}", model_parcel.label.name)
-            ))?;
+            .map_err(|_| BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string()))?;
         log::info!("successfully downloaded model {} of size {}", 
             model_parcel.label.name, model_data_blob.len());
 
         let metadata_blob: Vec<u8> = bindle_client
             .get_parcel(bindle_url, &metadata_parcel.label.sha256)
             .await
-            .map_err(|_| BindleError::BindleParcelNotFetchedError(
-                format!("{}", metadata_parcel.label.name)
-            ))?;
-        log::info!("successfully downloaded metadata {} of size {}", 
+            .map_err(|_| BindleError::BindleParcelNotFetchedError(metadata_parcel.label.name.to_string()))?;
+        log::info!("successfully downloaded metadata '{}' of size {}", 
             metadata_parcel.label.name, metadata_blob.len());
 
         // storing metadata makes sense when model data is done
@@ -108,20 +100,19 @@ impl BindleLoader {
     }
 
     /// get first member of
-    fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> Result<bindle::Parcel,()> {
+    //fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> BindleResult<&bindle::Parcel> {
+    fn get_first_member_of<'a>(parcels: &'a Vec<bindle::Parcel>, group: &'a str) -> BindleResult<&'a bindle::Parcel> {
         let members = parcels
         .into_iter()            
-        .filter(|parcel| 
-            parcel.conditions.is_some() && 
-            parcel.conditions.as_ref().unwrap().member_of.is_some()
-        )
+        .filter(|parcel| parcel.conditions.is_some() && parcel.conditions.as_ref().unwrap().member_of.is_some())
         .filter(|parcel| parcel.conditions.clone().unwrap().member_of.unwrap().iter().any(|mbs| *mbs == group) )
         .collect::<Vec<&bindle::Parcel>>();
 
-        return match members.len() {
-            0 => Err(()),
-            _ => Ok(members.first().unwrap().clone().clone())
+        if members.is_empty() { 
+            return Err(BindleError::BindleNoParcelOfGroupModelError) 
         };
+
+        members.into_iter().next().ok_or(BindleError::BindleNoParcelOfGroupModelError)
     }
 }
 

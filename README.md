@@ -15,3 +15,9 @@ This repository provides a [wasmCloud](https://wasmcloud.dev/) capability provid
 - [ ] Inference Actor
 - [ ] API Actor
 - [ ] tests
+
+
+## Further requirements (roadmap)
+
+- [ ] The contract should be ready to process an array of Tensors.
+- [ ] The `engine` in `MlinferenceProvider` shall be a *union* of concrete inference engines

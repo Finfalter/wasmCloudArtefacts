@@ -7,7 +7,7 @@ use crate::inference::{
     ExecutionTarget, Graph, GraphEncoding, GraphExecutionContext,
     InferenceEngine, InferenceError, InferenceResult, ModelState};
 
-use wasmcloud_interface_mlinference::{ Tensor, TensorOut, InferenceOutput, ResultStatus };
+use wasmcloud_interface_mlinference::{ Tensor, TensorType, InferenceOutput, ResultStatus };
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -48,7 +48,7 @@ impl InferenceEngine for TractEngine {
         target: &ExecutionTarget,
     ) -> InferenceResult<Graph> 
     {
-        log::info!("load: encoding: {:#?}, target: {:#?}", encoding, target);
+        log::info!("==============> load() - encoding: {:#?}, target: {:#?}", encoding, target);
 
         if encoding != &GraphEncoding(GraphEncoding::GRAPH_ENCODING_ONNX) 
         {
@@ -60,21 +60,21 @@ impl InferenceEngine for TractEngine {
         let graph = state.key(state.models.keys());
 
         log::info!(
-            "load: inserting graph: {:#?} with size {:#?}",
+            "load() - inserting graph: {:#?} with size {:#?}",
             graph,
             model_bytes.len()
         );
 
         state.models.insert(graph, model_bytes);
 
-        log::info!("load: current number of models: {:#?}", state.models.len());
+        log::info!("load() - current number of models: {:#?} ==============>", state.models.len());
 
         Ok(graph)
     }
 
     async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>
     {
-        log::info!("init_execution_context: graph: {:#?}", graph);
+        log::info!("==============> init_execution_context() - graph: {:#?}", graph);
 
         let mut state = self.state.write().await;
         let mut model_bytes = match state.models.get(&graph) 
@@ -82,7 +82,7 @@ impl InferenceEngine for TractEngine {
             Some(mb) => Cursor::new(mb),
             None => {
                 log::error!(
-                    "init_execution_context: cannot find model in state with graph {:#?}",
+                    "init_execution_context() - cannot find model in state with graph {:#?}",
                     graph
                 );
                 return Err(InferenceError::RuntimeError);
@@ -93,7 +93,7 @@ impl InferenceEngine for TractEngine {
 
         let gec = state.key(state.executions.keys());
         log::info!(
-            "init_execution_context: inserting graph execution context: {:#?}",
+            "init_execution_context() - inserting graph execution context: {:#?}",
             gec
         );
 
@@ -107,12 +107,14 @@ impl InferenceEngine for TractEngine {
     /// set_input
     async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()> 
     {
+        log::debug!("==============> set_input()");
+        
         let mut state = self.state.write().await;
         let execution = match state.executions.get_mut(&context) {
             Some(s) => s,
             None => {
                 log::error!(
-                    "set_input: cannot find session in state with context {:#?}",
+                    "set_input() - cannot find session in state with context {:#?}",
                     context
                 );
 
@@ -137,7 +139,7 @@ impl InferenceEngine for TractEngine {
             Some(ref mut input_arrays) => {
                 input_arrays.push(input);
                 log::info!(
-                    "set_input: input arrays now contains {} items",
+                    "set_input() - input arrays now contains {} items",
                     input_arrays.len(),
                 );
             }
@@ -145,19 +147,21 @@ impl InferenceEngine for TractEngine {
                 execution.input_tensors = Some(vec![input]);
             }
         };
-
+        log::debug!("set_input() ==============> ");
         Ok(())
     }
 
     /// compute()
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
     {
+        log::debug!("==============> compute()");
+        
         let mut state = self.state.write().await;
         let mut execution = match state.executions.get_mut(&context) {
             Some(s) => s,
             None => {
                 log::error!(
-                    "compute: cannot find session in state with context {:#?}",
+                    "compute() - cannot find session in state with context {:#?}",
                     context
                 );
 
@@ -179,7 +183,7 @@ impl InferenceEngine for TractEngine {
             .collect();
 
         log::info!(
-            "compute: input tensors contains {} elements",
+            "compute() - input tensors contains {} elements",
             input_tensors.len()
         );
 
@@ -194,7 +198,7 @@ impl InferenceEngine for TractEngine {
             .run(input_tensors.into())?;
 
         log::info!(
-            "compute: output tensors contains {} elements",
+            "compute() - output tensors contains {} elements",
             output_tensors.len()
         );
         match execution.output_tensors {
@@ -206,7 +210,7 @@ impl InferenceEngine for TractEngine {
                 execution.output_tensors = Some(output_tensors.into_iter().collect());
             }
         };
-
+        log::debug!("compute() ==============> ");
         Ok(())
     }
 
@@ -217,12 +221,13 @@ impl InferenceEngine for TractEngine {
         index: u32
     ) -> InferenceResult<InferenceOutput> 
     {
+        log::debug!("==============> get_output()");
         let state = self.state.read().await;
         let execution = match state.executions.get(&context) {
             Some(s) => s,
             None => {
                 log::error!(
-                    "compute: cannot find session in state with context {:#?}",
+                    "compute() - cannot find session in state with context {:#?}",
                     context
                 );
 
@@ -233,7 +238,7 @@ impl InferenceEngine for TractEngine {
         let output_tensors = match execution.output_tensors {
             Some(ref oa) => oa,
             None         => {
-                log::error!("get_output: output_tensors for session is none. Perhaps you haven't called compute yet?");
+                log::error!("get_output() - output_tensors for session is none. Perhaps you haven't called compute yet?");
                 return Err(InferenceError::RuntimeError);
             }
         };
@@ -242,7 +247,7 @@ impl InferenceEngine for TractEngine {
             Some(a) => a,
             None    => {
                 log::error!(
-                    "get_output: output_tensors does not contain index {}",
+                    "get_output() - output_tensors does not contain index {}",
                     index
                 );
                 return Err(InferenceError::RuntimeError);
@@ -250,16 +255,16 @@ impl InferenceEngine for TractEngine {
         };
 
         let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
-        let size = bytes.len();
 
         let io = InferenceOutput {
             result: ResultStatus { has_error: false, error: None },
-            tensor: TensorOut {
-                buffer_size: Some(size as u64),
+            tensor: Tensor {
+                ttype: TensorType{ ttype: 0},
+                dimensions: vec![],
                 data: bytes
             }
         };
-
+        log::debug!("get_output() ==============>");
         Ok(io)
     }
 
@@ -276,22 +281,24 @@ impl InferenceEngine for TractEngine {
 pub type Result<T> = std::io::Result<T>;
 
 pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
-    let chunks: Vec<&[u8]> = data.chunks(4).collect();
-    let v: Vec<Result<f32>> = chunks
+    //let chunks: Vec<&[u8]> = data.chunks(4).collect();
+    let chunks = data.chunks(4);
+    //let v: Vec<Result<f32>> = chunks
+    let v = chunks
         .into_iter()
         .map(|c| {
             let mut rdr = Cursor::new(c);
             Ok(rdr.read_f32::<LittleEndian>()?)
-        })
-        .collect();
+        });
+        //.collect();
 
-    v.into_iter().collect()
+    v.collect()
 }
 
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
     log::info!(
-        "f32_vec_to_bytes: flatten output tensor contains {} elements with sum {}",
+        "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",
         data.len(),
         sum
     );
@@ -299,7 +306,7 @@ pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let result: Vec<u8> = chunks.iter().flatten().copied().collect();
 
     log::info!(
-        "f32_vec_to_bytes: flatten byte output tensor contains {} elements",
+        "f32_vec_to_bytes() - flatten byte output tensor contains {} elements",
         result.len()
     );
     result

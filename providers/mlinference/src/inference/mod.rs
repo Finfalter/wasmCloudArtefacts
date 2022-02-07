@@ -1,7 +1,7 @@
 mod tract;
 pub use tract::{TractSession, TractEngine};
 
-use wasmcloud_interface_mlinference::{ Tensor, InferenceOutput };
+use wasmcloud_interface_mlinference::{ Tensor, TensorType, InferenceOutput };
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -97,13 +97,25 @@ impl ExecutionTarget {
 
 /// TensorType
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TensorType(pub u8);
+pub struct TType(pub u8);
 
-impl TensorType {
+impl TType {
     pub const F16: u8 = 0;
     pub const F32: u8 = 1;
     pub const  U8: u8 = 2;
     pub const I32: u8 = 3;
+}
+
+impl From<TensorType> for TType {
+    fn from(tt: TensorType) -> TType {
+        TType(tt.ttype)
+    }
+}
+
+impl From<TType> for TensorType {
+    fn from(tt: TType) -> TensorType {
+        TensorType{ttype: tt.0}
+    }
 }
 
 #[derive(Default)]

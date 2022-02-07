@@ -9,10 +9,13 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
+const IDENTITY_MODEL_PATH: &str = "tests/testdata/models/identity_input_output.onnx";
+
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
-    let res = run_selected_spawn!(&opts, health_check, test_one);
+    //let res = run_selected_spawn!(&opts, health_check, test_one);
+    let res = run_selected_spawn!(&opts, test_one);
     print_test_results(&res);
 
     let passed = res.iter().filter(|tr| tr.passed).count();
@@ -34,46 +37,28 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     Ok(())
 }
 
-// /// tests of the Mlinference capability
-// async fn factorial_0_1(_opt: &TestOptions) -> RpcResult<()> {
-//     let prov = test_provider().await;
-
-//     // create client and ctx
-//     let client = MlinferenceSender::via(prov);
-//     let ctx = Context::default();
-
-//     let resp = client.calculate(&ctx, &0).await?;
-//     assert_eq!(resp, 1, "0!");
-
-//     let resp = client.calculate(&ctx, &1).await?;
-//     assert_eq!(resp, 1, "1!");
-
-//     Ok(())
-// }
-
-// /// more tests of the Mlinference interface
-// async fn factorial_more(_opt: &TestOptions) -> RpcResult<()> {
-//     let prov = test_provider().await;
-
-//     // create client and ctx
-//     let client = MlinferenceSender::via(prov);
-//     let ctx = Context::default();
-
-//     let resp = client.calculate(&ctx, &2).await?;
-//     assert_eq!(resp, 2, "2!");
-
-//     let resp = client.calculate(&ctx, &3).await?;
-//     assert_eq!(resp, 6, "3!");
-
-//     let resp = client.calculate(&ctx, &4).await?;
-//     assert_eq!(resp, 24, "4!");
-
-//     Ok(())
-// }
-
 /// more tests of the Mlinference interface
 async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
-    let _prov = test_provider().await;
+    let prov = test_provider().await;
+    let ctx = Context::default();
 
-   Ok(())
+    let client = MlinferenceSender::via(prov);
+
+    let model = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
+
+    let t = Tensor {
+        ttype: TensorType { ttype: 0},
+        dimensions: vec![1, 2, 3, 4],
+        data: model
+    };
+
+    let ir = InferenceRequest {
+        model: "flex".to_string(),
+        tensor: t,
+        index: 0
+    };
+
+    let resp = client.predict(&ctx, &ir).await?;
+
+    Ok(())
 }

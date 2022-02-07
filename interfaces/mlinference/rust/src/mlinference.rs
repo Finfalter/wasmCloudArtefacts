@@ -16,7 +16,7 @@ pub const SMITHY_VERSION: &str = "1.0";
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct InferenceOutput {
     pub result: ResultStatus,
-    pub tensor: TensorOut,
+    pub tensor: Tensor,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -46,21 +46,19 @@ pub struct ResultStatus {
 /// Any metadata shall be associated to the respective model in a blob store.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Tensor {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub buffer_size: Option<u64>,
-    pub data: TensorData,
+    pub ttype: TensorType,
     pub dimensions: TensorDimensions,
+    #[serde(with = "serde_bytes")]
+    #[serde(default)]
+    pub data: Vec<u8>,
 }
-
-pub type TensorData = Vec<u8>;
 
 pub type TensorDimensions = Vec<u32>;
 
+/// TensorType
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TensorOut {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub buffer_size: Option<u64>,
-    pub data: TensorData,
+pub struct TensorType {
+    pub ttype: u8,
 }
 
 /// The Mlinference service

@@ -75,7 +75,7 @@ pub struct Models {
 
 impl Models {
     fn is_empty(&mut self) -> bool {
-        return self.zoo.is_empty();
+        self.zoo.is_empty()
     }
 }
 

@@ -51,20 +51,53 @@ structure InferenceRequest {
 /// Any metadata shall be associated to the respective model in a blob store.
 structure Tensor {
     @required
-    dimensions: TensorDimensions,
-
-    buffer_size: U64,
+    @n(0)
+    ttype: TensorType,
 
     @required
-    data: TensorData
+    @n(1)
+    dimensions: TensorDimensions,
+
+    @required
+    @n(2)
+    data: Blob
 }
 
 list TensorDimensions {
   member: U32
 }
 
-list TensorData {
-  member: U8
+/// TensorType
+structure TensorType {
+  // enum seems to have no impact on the code generator
+  @enum([
+    {
+      value: 0,
+      name: "TENSOR_TYPE_F16",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 1,
+      name: "TENSOR_TYPE_F32",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 2,
+      name: "TENSOR_TYPE_U8",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    },
+    {
+      value: 3,
+      name: "TENSOR_TYPE_I32",
+      documentation: """TBD""",
+      tags: ["tensorType"]
+    }
+  ])
+  @required
+  ttype: U8
 }
 
 /// InferenceOutput
@@ -75,14 +108,7 @@ structure InferenceOutput {
 
   @required
   @n(1)
-  tensor: TensorOut
-}
-
-structure TensorOut {
-    buffer_size: U64,
-
-    @required
-    data: TensorData
+  tensor: Tensor
 }
 
 structure ResultStatus {

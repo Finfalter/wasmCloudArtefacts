@@ -91,9 +91,6 @@ impl InferenceEngine for TractEngine {
 
         let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
 
-        // NOTE: the next line was added last. File was saved. This is not visible in the output.
-        log::info!("init_execution_context() 1 ==============>");
-
         let gec = state.key(state.executions.keys());
         log::info!(
             "init_execution_context() - inserting graph execution context: {:#?}",
@@ -104,7 +101,7 @@ impl InferenceEngine for TractEngine {
             .executions
             .insert(gec, TractSession::with_graph(model));
 
-        log::info!("init_execution_context() 2 ==============>");
+        log::info!("init_execution_context() ==============>");
 
         Ok(gec)
     }

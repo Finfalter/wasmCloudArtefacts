@@ -74,12 +74,8 @@ impl ProviderHandler for MlinferenceProvider {
 
             let (metadata, model_data_bytes) = downloads;
 
-            log::debug!("metadata to {:?}", &metadata);
-
             context.load_metadata(metadata)
             .map_err(|e| RpcError::InvalidParameter(format!("{:?}",e)))?;
-
-            log::debug!("==============> 'context' filled with {:?}", &context);
 
             let graph: Graph = self.engine.load(&model_data_bytes, &context.graph_encoding, &context.execution_target)
                 .await
@@ -94,8 +90,12 @@ impl ProviderHandler for MlinferenceProvider {
             context.graph_execution_context = gec;
         }
 
+        log::debug!("==============> 'context' filled with {:?}", &model_zoo);
+
         let mut actor_lock = self.actors.write().await;
         actor_lock.insert(ld.actor_id.to_string(), model_zoo);
+
+        log::info!("put_link() ==============>");
 
         Ok(true)
     }
@@ -126,7 +126,7 @@ impl Mlinference for MlinferenceProvider {
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> 
     {  
-        log::debug!("predict() ==============>");
+        log::debug!("==============> predict()");
         
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
@@ -174,7 +174,7 @@ impl Mlinference for MlinferenceProvider {
             Ok(r)    => r,
             Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
         };
-        log::debug!("==============> predict()");
+        log::debug!("predict() ==============> ");
         Ok(result)
     }
 }

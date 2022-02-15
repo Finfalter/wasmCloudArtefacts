@@ -58,7 +58,7 @@ impl ProviderHandler for MlinferenceProvider {
             model_zoo
             .insert(k.to_string(), ModelContext { 
                 bindle_url: v.to_string(), 
-                ..Default::default() 
+                ..Default::default()
             });
         });
 

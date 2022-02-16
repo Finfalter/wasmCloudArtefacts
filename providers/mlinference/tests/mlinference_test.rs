@@ -70,6 +70,9 @@ async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     log::debug!("test_one() with result {:?}", resp);
 
     log::info!("test_one() ==============>");
+    log::info!("test_one() shows the following result: {:?}", resp);
+    log::error!("test_one() ==============>");
+    assert_eq!(1,1, "SHOULD BE 1");
 
     Ok(())
 }

@@ -18,7 +18,7 @@ use org.wasmcloud.model#U64
 
 /// The Mlinference service
 @wasmbus(
-    contractId: "example:interfaces:mlinference",
+    contractId: "wasmcloud:interfaces:mlinference",
     actorReceive: true,
     providerReceive: true )
 

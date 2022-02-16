@@ -49,6 +49,34 @@ impl ProviderHandler for MlinferenceProvider {
 
     async fn put_link(&self, ld: &LinkDefinition) -> Result<bool, RpcError> 
     {
+        let this = self.clone();
+        let ld = ld.clone();
+        tokio::spawn(async move { this.put_link_sub(&ld).await });
+        Ok(true)
+    }
+
+    /// Handle notification that a link is dropped
+    async fn delete_link(&self, actor_id: &str) 
+    {
+        let mut actor_lock = self.actors.write().await;
+
+        let model_zoo: &ModelZoo = match actor_lock.get(actor_id) {
+            Some(mz) => mz,
+            None     => { return; }
+        };
+
+        for (_, context) in model_zoo.iter() 
+        {
+            self.engine.drop_model_state(&context.graph, &context.graph_execution_context).await;
+        }
+
+        actor_lock.remove(actor_id);
+    }
+}
+    
+impl MlinferenceProvider {
+    async fn put_link_sub(&self, ld: &LinkDefinition) -> Result<bool, RpcError> 
+    {
         let settings = load_settings(&ld.values)
             .map_err(|e| RpcError::ProviderInit(e.to_string()))?;
 
@@ -98,24 +126,6 @@ impl ProviderHandler for MlinferenceProvider {
         log::info!("put_link() ==============>");
 
         Ok(true)
-    }
-
-    /// Handle notification that a link is dropped
-    async fn delete_link(&self, actor_id: &str) 
-    {
-        let mut actor_lock = self.actors.write().await;
-
-        let model_zoo: &ModelZoo = match actor_lock.get(actor_id) {
-            Some(mz) => mz,
-            None     => { return; }
-        };
-
-        for (_, context) in model_zoo.iter() 
-        {
-            self.engine.drop_model_state(&context.graph, &context.graph_execution_context).await;
-        }
-
-        actor_lock.remove(actor_id);
     }
 }
 

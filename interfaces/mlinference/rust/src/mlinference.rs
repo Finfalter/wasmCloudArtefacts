@@ -630,14 +630,14 @@ pub fn decode_tensor_type(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tens
     Ok(__result)
 }
 /// The Mlinference service
-/// wasmbus.contractId: example:interfaces:mlinference
+/// wasmbus.contractId: wasmcloud:interfaces:mlinference
 /// wasmbus.providerReceive
 /// wasmbus.actorReceive
 #[async_trait]
 pub trait Mlinference {
     /// returns the capability contract id for this interface
     fn contract_id() -> &'static str {
-        "example:interfaces:mlinference"
+        "wasmcloud:interfaces:mlinference"
     }
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput>;
@@ -711,10 +711,10 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 #[cfg(target_arch = "wasm32")]
 impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
     /// Constructs a client for sending to a Mlinference provider
-    /// implementing the 'example:interfaces:mlinference' capability contract, with the "default" link
+    /// implementing the 'wasmcloud:interfaces:mlinference' capability contract, with the "default" link
     pub fn new() -> Self {
         let transport = wasmbus_rpc::actor::prelude::WasmHost::to_provider(
-            "example:interfaces:mlinference",
+            "wasmcloud:interfaces:mlinference",
             "default",
         )
         .unwrap();
@@ -722,10 +722,10 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
     }
 
     /// Constructs a client for sending to a Mlinference provider
-    /// implementing the 'example:interfaces:mlinference' capability contract, with the specified link name
+    /// implementing the 'wasmcloud:interfaces:mlinference' capability contract, with the specified link name
     pub fn new_with_link(link_name: &str) -> wasmbus_rpc::RpcResult<Self> {
         let transport = wasmbus_rpc::actor::prelude::WasmHost::to_provider(
-            "example:interfaces:mlinference",
+            "wasmcloud:interfaces:mlinference",
             link_name,
         )?;
         Ok(Self { transport })

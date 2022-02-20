@@ -48,7 +48,7 @@ impl InferenceEngine for TractEngine {
         target: &ExecutionTarget,
     ) -> InferenceResult<Graph> 
     {
-        log::info!("==============> load() - encoding: {:#?}, target: {:#?}", encoding, target);
+        log::debug!("load() - encoding: {:#?}, target: {:#?}", encoding, target);
 
         if encoding != &GraphEncoding(GraphEncoding::GRAPH_ENCODING_ONNX) 
         {
@@ -59,7 +59,7 @@ impl InferenceEngine for TractEngine {
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
-        log::info!(
+        log::debug!(
             "load() - inserting graph: {:#?} with size {:#?}",
             graph,
             model_bytes.len()
@@ -67,14 +67,14 @@ impl InferenceEngine for TractEngine {
 
         state.models.insert(graph, model_bytes);
 
-        log::info!("load() - current number of models: {:#?} ==============>", state.models.len());
+        log::debug!("load() - current number of models: {:#?}", state.models.len());
 
         Ok(graph)
     }
 
     async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>
     {
-        log::info!("==============> init_execution_context() - graph: {:#?}", graph);
+        log::debug!("init_execution_context() - graph: {:#?}", graph);
 
         let mut state = self.state.write().await;
         let mut model_bytes = match state.models.get(&graph) 
@@ -92,7 +92,7 @@ impl InferenceEngine for TractEngine {
         let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
 
         let gec = state.key(state.executions.keys());
-        log::info!(
+        log::debug!(
             "init_execution_context() - inserting graph execution context: {:#?}",
             gec
         );
@@ -101,15 +101,13 @@ impl InferenceEngine for TractEngine {
             .executions
             .insert(gec, TractSession::with_graph(model));
 
-        log::info!("init_execution_context() ==============>");
-
         Ok(gec)
     }
 
     /// set_input
     async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()> 
     {
-        log::debug!("==============> set_input()");
+        log::debug!("entering set_input() with context: {:?}, index: {}, tensor: {:?}", &context, index, tensor);
         
         let mut state = self.state.write().await;
         let execution = match state.executions.get_mut(&context) {
@@ -119,7 +117,6 @@ impl InferenceEngine for TractEngine {
                     "set_input() - cannot find session in state with context {:#?}",
                     context
                 );
-
                 return Err(InferenceError::RuntimeError);
             }
         };
@@ -133,14 +130,14 @@ impl InferenceEngine for TractEngine {
         execution.graph.set_input_fact(
             index as usize,
             InferenceFact::dt_shape(f32::datum_type(), shape.clone()))?;
-        
+
         let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
         let input: TractTensor = Array::from_shape_vec(shape, data)?.into();
 
         match execution.input_tensors {
             Some(ref mut input_arrays) => {
                 input_arrays.push(input);
-                log::info!(
+                log::debug!(
                     "set_input() - input arrays now contains {} items",
                     input_arrays.len(),
                 );
@@ -149,15 +146,12 @@ impl InferenceEngine for TractEngine {
                 execution.input_tensors = Some(vec![input]);
             }
         };
-        log::debug!("set_input() ==============> ");
         Ok(())
     }
 
     /// compute()
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
-    {
-        log::debug!("==============> compute()");
-        
+    {       
         let mut state = self.state.write().await;
         let mut execution = match state.executions.get_mut(&context) {
             Some(s) => s,
@@ -184,7 +178,7 @@ impl InferenceEngine for TractEngine {
             .into_iter()
             .collect();
 
-        log::info!(
+        log::debug!(
             "compute() - input tensors contains {} elements",
             input_tensors.len()
         );
@@ -199,7 +193,7 @@ impl InferenceEngine for TractEngine {
             .into_runnable()?
             .run(input_tensors.into())?;
 
-        log::info!(
+        log::debug!(
             "compute() - output tensors contains {} elements",
             output_tensors.len()
         );
@@ -212,7 +206,6 @@ impl InferenceEngine for TractEngine {
                 execution.output_tensors = Some(output_tensors.into_iter().collect());
             }
         };
-        log::debug!("compute() ==============> ");
         Ok(())
     }
 
@@ -262,7 +255,7 @@ impl InferenceEngine for TractEngine {
             result: ResultStatus { has_error: false, error: None },
             tensor: Tensor {
                 ttype: TensorType{ ttype: 0},
-                dimensions: vec![],
+                dimensions: tensor.shape().iter().cloned().map(|i| i as u32).collect::<Vec<u32>>(),
                 data: bytes
             }
         };
@@ -283,23 +276,36 @@ impl InferenceEngine for TractEngine {
 pub type Result<T> = std::io::Result<T>;
 
 pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
-    //let chunks: Vec<&[u8]> = data.chunks(4).collect();
-    let chunks = data.chunks(4);
-    //let v: Vec<Result<f32>> = chunks
-    let v = chunks
+    let chunks: Vec<&[u8]> = data.chunks(4).collect();
+    let v: Vec<Result<f32>> = chunks
         .into_iter()
         .map(|c| {
             let mut rdr = Cursor::new(c);
             Ok(rdr.read_f32::<LittleEndian>()?)
-        });
-        //.collect();
+        })
+        .collect();
 
-    v.collect()
+    v.into_iter().collect()
 }
+
+// pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+//     //let chunks: Vec<&[u8]> = data.chunks(4).collect();
+//     let chunks = data.chunks(4);
+//     //let v: Vec<Result<f32>> = chunks
+//     let v = chunks
+//         .into_iter()
+//         .map(|c| {
+//             let mut rdr = Cursor::new(c);
+//             Ok(rdr.read_f32::<LittleEndian>()?)
+//         });
+//         //.collect();
+
+//     v.collect()
+// }
 
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
-    log::info!(
+    log::debug!(
         "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",
         data.len(),
         sum
@@ -307,7 +313,7 @@ pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
     let result: Vec<u8> = chunks.iter().flatten().copied().collect();
 
-    log::info!(
+    log::debug!(
         "f32_vec_to_bytes() - flatten byte output tensor contains {} elements",
         result.len()
     );

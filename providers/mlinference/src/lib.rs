@@ -10,11 +10,12 @@ use wasmcloud_interface_mlinference::{ Tensor, TensorType, ResultStatus, MlError
 mod bindle_loader;
 pub use bindle_loader::{BindleLoader, ModelMetadata};
 
-mod inference;
+pub mod inference;
 pub use inference::{
     ExecutionTarget,
     Graph, GraphEncoding, GraphExecutionContext, 
-    TractEngine, ModelState, TType, InferenceEngine};
+    TractEngine, ModelState, TType, InferenceEngine,
+    f32_vec_to_bytes, bytes_to_f32_vec};
 
 mod settings;
 pub use settings::{load_settings, ModelSettings};

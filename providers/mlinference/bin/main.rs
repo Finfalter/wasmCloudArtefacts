@@ -103,7 +103,7 @@ impl MlinferenceProvider {
             let (metadata, model_data_bytes) = downloads;
 
             context.load_metadata(metadata)
-            .map_err(|e| RpcError::InvalidParameter(format!("{:?}",e)))?;
+                .map_err(|e| RpcError::InvalidParameter(format!("{:?}",e)))?;
 
             let graph: Graph = self.engine.load(&model_data_bytes, &context.graph_encoding, &context.execution_target)
                 .await
@@ -118,12 +118,8 @@ impl MlinferenceProvider {
             context.graph_execution_context = gec;
         }
 
-        log::debug!("==============> 'context' filled with {:?}", &model_zoo);
-
         let mut actor_lock = self.actors.write().await;
         actor_lock.insert(ld.actor_id.to_string(), model_zoo);
-
-        log::info!("put_link() ==============>");
 
         Ok(true)
     }
@@ -135,9 +131,7 @@ impl MlinferenceProvider {
 impl Mlinference for MlinferenceProvider {
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> 
-    {  
-        log::debug!("==============> predict()");
-        
+    {   
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None    => {
@@ -158,6 +152,7 @@ impl Mlinference for MlinferenceProvider {
             Some(v) => v,
             None    => {
                 let ir = get_default_inference_result(Some(MlError{err: 6}));
+                log::error!("predict() returns early because no corresponding actor found!");
                 return Ok(ir);
             }
         };
@@ -166,13 +161,17 @@ impl Mlinference for MlinferenceProvider {
             Some(m) => m,
             None    => {
                 let ir = get_default_inference_result(Some(MlError{err: 6}));
+                log::error!("predict() returns early because no corresponding model found!");
                 return Ok(ir);
             }
         };
 
         match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
             Ok(_)    => {},
-            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+            Err(e)   => {
+                log::error!("predict() inference engine failed in 'set_input()' with '{}'",e);
+                return Ok(get_default_inference_result(Some(MlError{err: 6})));
+            }
         }
 
         match self.engine.compute(model_context.graph_execution_context).await {
@@ -184,39 +183,9 @@ impl Mlinference for MlinferenceProvider {
             Ok(r)    => r,
             Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
         };
-        log::debug!("predict() ==============> ");
+
+        log::debug!("predict() returns according to plan with result: {:?}",&result);
+
         Ok(result)
     }
 }
-
-
-// #[cfg(test)]
-// mod tests {
-    
-//     // use std::{collections::HashMap};
-//     // use wasmbus_rpc::core::{LinkDefinition, LinkSettings};
-//     // use crate::MlinferenceProvider;
-//     // use wasmbus_rpc::provider::ProviderHandler;
-
-//     #[test]
-//     fn it_works() {
-
-//         // let x: LinkSettings = HashMap::from([
-//         //     (String::from("flex"), String::from("enterprise.com/warpcore/1.2.0")),
-//         //     (String::from("champion"), String::from("enterprise.com/warpcore/1.0.0")),
-//         //     (String::from("challenger"), String::from("enterprise.com/warpcore/1.1.0")),
-//         // ]);
-    
-//         // let link_definitions: LinkDefinition = LinkDefinition {
-//         //     actor_id: "123".to_string(),
-//         //     provider_id: "whatever".to_string(),
-//         //     link_name: "whatever".to_string(),
-//         //     contract_id: "unimportant".to_string(),
-//         //     values: x
-//         // };
-
-//         // MlinferenceProvider.put_link(link_definitions);
-
-//         //assert_eq!(2 + 2, 4);
-//     }
-// }

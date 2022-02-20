@@ -4,7 +4,7 @@
 # ~/.cache/bindle
 
 export BINDLE_URL="http://localhost:8080/v1/"
-export RUST_LOG=error,warp=info,bindle=trace
+export RUST_LOG=debug,warp=info,bindle=trace
 #export RUST_LOG=error,warp=info,bindle=debug
 target/debug/bindle-server --directory ${HOME}/.bindle/bindles --unauthenticated
 

@@ -1,3 +1,4 @@
+use ndarray::array;
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::*;
 use wasmcloud_test_util::{
@@ -9,11 +10,15 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
-const IDENTITY_MODEL_PATH: &str = "tests/testdata/models/identity_input_output.onnx";
+use wasmcloud_provider_mlinference::inference::f32_vec_to_bytes;
 
 async fn get_environment() -> (MlinferenceSender<Provider>, Context) {
     // create a provider, client and context
     let prov = test_provider().await;
+
+    eprintln!("Pausing 5 sec to load model");
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
     let client = MlinferenceSender::via(prov);
     let ctx = Context::default();
 
@@ -49,30 +54,37 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
 async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
-    log::info!("==============> test_one()");
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    println!("input_tensor: {:#?}", input_tensor);
 
-    let model = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
+    let tensor_shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
+    println!("shape: {:#?}", tensor_shape);
+
+    let tensor_data = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+    println!("input_tensor: {:#?}", input_tensor);
+
+    let tensor_data_cloned = tensor_data.clone();
+    let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
         ttype: TensorType { ttype: 0},
-        dimensions: vec![1, 2, 3, 4],
-        data: model
+        dimensions: tensor_shape,
+        data: tensor_data
     };
 
     let ir = InferenceRequest {
-        model: "flex".to_string(),
+        model: "challenger".to_string(),
         tensor: t,
         index: 0
     };
 
-    let resp = env.0.predict(&env.1, &ir).await?;
+    let predict_result = env.0.predict(&env.1, &ir).await?;
 
-    log::debug!("test_one() with result {:?}", resp);
+    println!("test_one() with result {:?}", predict_result);
 
-    log::info!("test_one() ==============>");
-    log::info!("test_one() shows the following result: {:?}", resp);
-    log::error!("test_one() ==============>");
-    assert_eq!(1,1, "SHOULD BE 1");
+    assert_eq!(tensor_data_cloned, predict_result.tensor.data, "Output data should be the same as input data");
+    assert_eq!(tensor_shape_cloned, predict_result.tensor.dimensions, "Output shape should be the same as input shape");
 
     Ok(())
 }
+

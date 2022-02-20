@@ -14,11 +14,11 @@ files = [ "mlinference.smithy" ]
 
 
 [[models]]
-# Location of dependencies may be either a path to a directory, or a url prefix
-# If a relative path is used, it is relative to the location of this codegen.toml
-#path = "/path/to/my-interfaces"
-url = "https://wasmcloud.github.io/interfaces/idl/org.wasmcloud"
-files = [ "wasmcloud-core.smithy", "wasmcloud-model.smithy" ]
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@77317ba3c1c6b65c9f3eb7e8ab3d2b44248f6182/core/wasmcloud-model.smithy"
+
+[[models]]
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces/core"
+files = [ "wasmcloud-core.smithy" ]
 
 
 ##

@@ -5,11 +5,13 @@ metadata package = [ { namespace: "com.example.interfaces.mlinference", crate: "
 
 namespace com.example.interfaces.mlinference
 
+use org.wasmcloud.model#codegenRust
 use org.wasmcloud.model#wasmbus
 use org.wasmcloud.model#n
 use org.wasmcloud.model#U8
 use org.wasmcloud.model#U32
 use org.wasmcloud.model#U64
+//use org.wasmcloud.model#F32
 
 //! The Mlinference service issues inference requests via an inference engine.
 //! It exposes one method:
@@ -49,6 +51,7 @@ structure InferenceRequest {
 
 /// The tensor's dimensions and type are provided as metadata to a model.
 /// Any metadata shall be associated to the respective model in a blob store.
+//@codegenRust(noDeriveDefault: true, noDeriveEq: true)
 structure Tensor {
     @required
     @n(0)

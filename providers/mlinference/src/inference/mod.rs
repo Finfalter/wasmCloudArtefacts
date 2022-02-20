@@ -1,5 +1,5 @@
 mod tract;
-pub use tract::{TractSession, TractEngine};
+pub use tract::{TractSession, TractEngine, f32_vec_to_bytes, bytes_to_f32_vec};
 
 use wasmcloud_interface_mlinference::{ Tensor, TensorType, InferenceOutput };
 

@@ -2377,9 +2377,9 @@ dependencies = [
 
 [[package]]
 name = "wasmbus-rpc"
-version = "0.7.3"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2f7835acd79d6615296e80318d6bcceb16db5f36f980a0a6a852e57516919fa"
+checksum = "9cdbdfc36babae3b9a6f9aafa1ec2dafd2f6c365ce38033efa5ca64f8acf8f02"
 dependencies = [
  "async-trait",
  "base64",
@@ -2488,9 +2488,9 @@ dependencies = [
 
 [[package]]
 name = "weld-codegen"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0b2e84ff3ab78f8713b9bd1fae6eba7153712afd4a6903e60f4b612c8c8cab1"
+checksum = "0bf05feeef365e52386013b1ae125af102eba78e1292ba25e8c2ef3c5f4cd19b"
 dependencies = [
  "Inflector",
  "atelier_assembler",

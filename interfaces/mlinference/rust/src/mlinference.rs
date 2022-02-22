@@ -300,7 +300,6 @@ pub struct ResultStatus {
     #[serde(rename = "hasError")]
     #[serde(default)]
     pub has_error: bool,
-    #[serde(rename = "Error")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<MlError>,
 }
@@ -372,7 +371,7 @@ pub fn decode_result_status(
             for __i in 0..(len as usize) {
                 match d.str()? {
                     "hasError" => has_error = Some(d.bool()?),
-                    "Error" => {
+                    "error" => {
                         error = if wasmbus_rpc::cbor::Type::Null == d.datatype()? {
                             d.skip()?;
                             Some(None)
@@ -404,7 +403,8 @@ pub fn decode_result_status(
 /// Any metadata shall be associated to the respective model in a blob store.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Tensor {
-    pub ttype: TensorType,
+    #[serde(rename = "tensorType")]
+    pub tensor_type: TensorType,
     pub dimensions: TensorDimensions,
     #[serde(with = "serde_bytes")]
     #[serde(default)]
@@ -418,7 +418,7 @@ pub fn encode_tensor<W: wasmbus_rpc::cbor::Write>(
     val: &Tensor,
 ) -> RpcResult<()> {
     e.array(3)?;
-    encode_tensor_type(e, &val.ttype)?;
+    encode_tensor_type(e, &val.tensor_type)?;
     encode_tensor_dimensions(e, &val.dimensions)?;
     e.bytes(&val.data)?;
     Ok(())
@@ -428,7 +428,7 @@ pub fn encode_tensor<W: wasmbus_rpc::cbor::Write>(
 #[doc(hidden)]
 pub fn decode_tensor(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tensor, RpcError> {
     let __result = {
-        let mut ttype: Option<TensorType> = None;
+        let mut tensor_type: Option<TensorType> = None;
         let mut dimensions: Option<TensorDimensions> = None;
         let mut data: Option<Vec<u8>> = None;
 
@@ -450,7 +450,7 @@ pub fn decode_tensor(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tensor, R
             for __i in 0..(len as usize) {
                 match __i {
                     0 => {
-                        ttype = Some(
+                        tensor_type = Some(
                             decode_tensor_type(d)
                                 .map_err(|e| format!("decoding 'TensorType': {}", e))?,
                         )
@@ -471,8 +471,8 @@ pub fn decode_tensor(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tensor, R
             })?;
             for __i in 0..(len as usize) {
                 match d.str()? {
-                    "ttype" => {
-                        ttype = Some(
+                    "tensorType" => {
+                        tensor_type = Some(
                             decode_tensor_type(d)
                                 .map_err(|e| format!("decoding 'TensorType': {}", e))?,
                         )
@@ -489,11 +489,11 @@ pub fn decode_tensor(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tensor, R
             }
         }
         Tensor {
-            ttype: if let Some(__x) = ttype {
+            tensor_type: if let Some(__x) = tensor_type {
                 __x
             } else {
                 return Err(RpcError::Deser(
-                    "missing field Tensor.ttype (#0)".to_string(),
+                    "missing field Tensor.tensor_type (#0)".to_string(),
                 ));
             },
 

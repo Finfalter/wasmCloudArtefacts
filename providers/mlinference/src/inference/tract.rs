@@ -216,7 +216,6 @@ impl InferenceEngine for TractEngine {
         index: u32
     ) -> InferenceResult<InferenceOutput> 
     {
-        log::debug!("==============> get_output()");
         let state = self.state.read().await;
         let execution = match state.executions.get(&context) {
             Some(s) => s,
@@ -254,12 +253,11 @@ impl InferenceEngine for TractEngine {
         let io = InferenceOutput {
             result: ResultStatus { has_error: false, error: None },
             tensor: Tensor {
-                ttype: TensorType{ ttype: 0},
+                tensor_type: TensorType{ ttype: 0},
                 dimensions: tensor.shape().iter().cloned().map(|i| i as u32).collect::<Vec<u32>>(),
                 data: bytes
             }
         };
-        log::debug!("get_output() ==============>");
         Ok(io)
     }
 

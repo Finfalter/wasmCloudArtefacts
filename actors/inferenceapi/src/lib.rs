@@ -2,9 +2,9 @@ use serde::{Deserialize};
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
-use wasmcloud_interface_mlcompute::{Converter, ConverterSender, Tensor, ComputeRequest, ComputeOutput};
+use wasmcloud_interface_mlinference::{Mlinference, MlinferenceSender, InferenceOutput, InferenceRequest, Tensor};
 
-const COMPUTE_ACTOR: &str = "mlcompute/compute";
+const INFERENCE_ACTOR: &str = "mlinference/predict";
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, HttpServer)]
@@ -49,13 +49,13 @@ async fn get_prediction(
         return Ok(HttpResponse::internal_server_error("Invalid input arguments",));
     }
     
-    let co_re = ComputeRequest {
+    let co_re = InferenceRequest {
         model: model_name.to_string(),
         index: index.parse().unwrap_or(0),
         tensor: tensor
     };
 
-    let compute_output: ComputeOutput = ConverterSender::to_actor(COMPUTE_ACTOR).compute(ctx, &co_re).await?;
+    let compute_output: InferenceOutput = MlinferenceSender::to_actor(INFERENCE_ACTOR).predict(ctx, &co_re).await?;
 
     if ! compute_output.result.has_error {
         HttpResponse::json(compute_output, 200)

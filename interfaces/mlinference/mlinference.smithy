@@ -9,9 +9,12 @@ use org.wasmcloud.model#codegenRust
 use org.wasmcloud.model#wasmbus
 use org.wasmcloud.model#n
 use org.wasmcloud.model#U8
+use org.wasmcloud.model#U16
 use org.wasmcloud.model#U32
 use org.wasmcloud.model#U64
-//use org.wasmcloud.model#F32
+//use org.wasmcloud.model#F16
+use org.wasmcloud.model#F32
+use org.wasmcloud.model#I32
 
 //! The Mlinference service issues inference requests via an inference engine.
 //! It exposes one method:
@@ -23,6 +26,7 @@ use org.wasmcloud.model#U64
     contractId: "wasmcloud:interfaces:mlinference",
     actorReceive: true,
     providerReceive: true )
+//    protocol: "2" )
 
 service Mlinference {
   version: "0.1",
@@ -55,7 +59,7 @@ structure InferenceRequest {
 structure Tensor {
     @required
     @n(0)
-    ttype: TensorType,
+    tensorType: TensorType,
 
     @required
     @n(1)
@@ -69,6 +73,21 @@ structure Tensor {
 list TensorDimensions {
   member: U32
 }
+
+// /// TensorType
+// union TensorType {
+//   //  @n(0)
+//   //  F16: F16,
+   
+//    @n(1)
+//    f32: F32,
+
+//    @n(2)
+//    u8: U8,
+
+//    @n(3)
+//    i32: I32
+// }
 
 /// TensorType
 structure TensorType {
@@ -120,8 +139,34 @@ structure ResultStatus {
   hasError: Boolean,
 
   @n(1)
-  Error: MlError
+  error: MlError
 }
+
+// union MlError {
+//   @n(0)
+//   INVALID_MODEL: U16,
+    
+//   @n(1)
+//   INVALID_ENCODING: U16,
+
+//   @n(2)
+//   CORRUPT_INPUT_TENSOR: U16,
+
+//   @n(3)
+//   RUNTIME_ERROR: U16,
+
+//   @n(4)
+//   OPEN_VINO_ERROR: U16,
+
+//   @n(5)
+//   ONNX_ERROR: U16,
+
+//   @n(6)
+//   TENSORFLOW_ERROR: U16,
+
+//   @n(7)
+//   CONTEXT_NOT_FOUND_ERROR: U16
+// }
 
 structure MlError {
   // enum seems to have no impact on the code generator

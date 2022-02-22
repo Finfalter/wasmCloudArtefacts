@@ -8,10 +8,11 @@
 #
 # The namespaces(s) that will be generated for this library are indicated
 # in the per-language file settings later in this file.
+
+
 [[models]]
 path = "."
 files = [ "mlinference.smithy" ]
-
 
 [[models]]
 url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@77317ba3c1c6b65c9f3eb7e8ab3d2b44248f6182/core/wasmcloud-model.smithy"

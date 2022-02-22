@@ -81,7 +81,7 @@ pub fn get_default_inference_result(ml_error: Option<MlError>) -> InferenceOutpu
     InferenceOutput {
         result: get_result_status(ml_error),
         tensor: Tensor {
-            ttype: TensorType{ ttype: 0},
+            tensor_type: TensorType{ ttype: 0},
             dimensions: vec![],
             data: vec![]
         }

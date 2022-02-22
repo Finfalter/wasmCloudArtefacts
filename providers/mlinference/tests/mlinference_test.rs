@@ -67,7 +67,7 @@ async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
-        ttype: TensorType { ttype: 0},
+        tensor_type: TensorType { ttype: 0},
         dimensions: tensor_shape,
         data: tensor_data
     };

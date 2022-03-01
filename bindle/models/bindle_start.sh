@@ -1,17 +1,20 @@
 #!/bin/bash
 
-# server side
+URL="${1:-http://localhost:8079/v1/}"
+BINDLE_SERVER="${2:-~/dev/rust/bindle/target/debug/bindle-server}"
+
+export BINDLE_URL=$URL
+
+echo "BINDLE_URL is set to '${URL}'"
+echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
 
 # Do not forget to clean bindle's cache:
 rm -rf ~/.cache/bindle
 
-export BINDLE_URL="http://localhost:8079/v1/"
-
-export RUST_LOG=error,warp=info,bindle=trace
-
+export RUST_LOG=debug,warp=info,bindle=trace
 #export RUST_LOG=error,warp=info,bindle=debug
 
-~/dev/rust/bindle/target/debug/bindle-server --directory ${HOME}/.bindle/bindles --unauthenticated
+$BINDLE_SERVER --directory ${HOME}/.bindle/bindles --unauthenticated &
 
 
 # client side

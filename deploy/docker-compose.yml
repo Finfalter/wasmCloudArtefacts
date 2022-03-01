@@ -1,0 +1,48 @@
+# docker-compose.yml for Mlinference
+#
+# Start all the services.
+# Before running this, secrets need to be created. The easiest thing to do
+# is to use './run.sh all' to start all services.
+#
+# What's here:
+#   wasmcloud host
+#   local registry
+#   nats
+#
+# Ports open on localhost:
+#  - 8080,443 httpserver to mlinference (depending on whether tls is enabled)
+#  - 4222,6222,8000 nats
+#  - 5000 registry
+#
+# Data is not saved in volumes, to make it easier to start
+#   with a clean image
+#
+version: '3.1'
+
+services:
+  nats:
+    image: nats:2.7.2
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:6222:6222"
+      - "127.0.0.1:8222:8222"
+    command: [ "-js" ]
+
+  registry:
+    image: registry:2.7
+    ports:
+      - "127.0.0.1:5000:5000"
+
+  # wasmcloud:
+  #   image: wasmcloud/wasmcloud_host:latest
+  #   environment:
+  #     LC_ALL: en_US.UTF-8
+  #     WASMCLOUD_OCI_ALLOWED_INSECURE: 127.0.0.1:5000
+  #     WASMCLOUD_RPC_HOST: nats
+  #     WASMCLOUD_CTL_HOST: nats
+  #     WASMCLOUD_PROV_RPC_HOST: nats
+  #     WASMCLOUD_CLUSTER_SEED: ${WASMCLOUD_CLUSTER_SEED}
+  #   ports:
+  #     - "127.0.0.1:4000:4000"  # washboard
+  #     - "127.0.0.1:443:8443"   # httpserver HTTPS port
+  #     - "127.0.0.1:8080:8080"

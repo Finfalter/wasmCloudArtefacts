@@ -1,0 +1,2 @@
+[values]
+models = {zoo = { challenger = "identity_model/0.2.0"}}

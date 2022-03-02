@@ -60,11 +60,16 @@ MLINFERENCE_ID=VDIRCLM2EUPU7JASBU7CWAXHBXCSYR7VAD2UZ5MZJUA47KPMQDOPTCB5
 # the registry using container name
 REG_SERVER=registry:5000
 
-# actor to link to httpsrever. there can be only one since there's one listen port
-HTTP_ACTOR=../actors/inferenceapi
+# actor to link to httpsrever. 
+INFERENCEAPI_ACTOR=../actors/inferenceapi
 
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
+
+MODEL_CONFIG=actor_config.toml
+
+# command to base64 encode stdin to stdout
+BASE64_ENC=base64
 
 # where passwords are stored after being generated
 SECRETS=.secrets
@@ -230,10 +235,15 @@ link_providers() {
     local _actor_id
     local _a
 
-    # link gateway actor to http server
-    _actor_id=$(make -C $HTTP_ACTOR --silent actor_id)
+    # link inferenceapi actor to http server
+    _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
     wash ctl link put $_actor_id $HTTPSERVER_ID     \
         wasmcloud:httpserver config_b64=$(b64_encode_file $HTTP_CONFIG )
+
+    # link inferenceapi actor to mlinference provider
+    _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
+    wash ctl link put $_actor_id $MLINFERENCE_ID     \
+        wasmcloud:interfaces:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
 }
 
 show_inventory() {

@@ -23,7 +23,7 @@ use org.wasmcloud.model#I32
 
 /// The Mlinference service
 @wasmbus(
-    contractId: "wasmcloud:interfaces:mlinference",
+    contractId: "wasmcloud:example:mlinference",
     actorReceive: true,
     providerReceive: true )
 //    protocol: "2" )

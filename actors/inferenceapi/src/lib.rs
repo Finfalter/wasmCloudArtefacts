@@ -93,7 +93,8 @@ async fn get_prediction(
         HttpResponse::json(compute_output, 200)
     } else {
         Ok(HttpResponse::internal_server_error(
-            "Failed to compute",
+            format!("compute_output: {:?}", compute_output)
+            //"Failed to compute",
         ))
     }
 }

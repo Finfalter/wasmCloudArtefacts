@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="${1:-http://localhost:8079/v1/}"
+URL="${1:-http://localhost:8080/v1/}"
 BINDLE_CLIENT="${2:-~/dev/rust/bindle/target/debug/bindle}"
 
 # set some environment variables

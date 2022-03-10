@@ -5,7 +5,7 @@
 # Do not forget to clean bindle's cache:
 rm -rf ~/.cache/bindle
 
-export BINDLE_URL="http://localhost:8079/v1/"
+export BINDLE_URL="http://localhost:8080/v1/"
 
 export RUST_LOG=error,warp=info,bindle=trace
 

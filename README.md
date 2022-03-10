@@ -39,11 +39,21 @@ The definition of the bindle, `invoice_w_groups.toml`, and its two parcels, `ide
 
 ### Launch
 
-Except the bindle-server, all entities are considered by option `all`. Start the bindle-server first, then the other entities:
+Except the bindle-server, all entities are considered and started by using option `all`. Start the bindle-server first, then the other entities:
 
 ```bash
-./deploy/run.sh start-bindle
-./deploy/run.sh all
+cd deploy
+# the leading dot will execute the script in the context of the calling shell
+# there are a few variable exports in that script which would be missed otherwise
+. ./run.sh bindle-start
+
+./run.sh all
+
+# execute next line to stop the application (except bindle server)
+# ./run.sh wipe
+
+# execute next line to stop bindle server
+# ./run.sh bindle-stop
 ```
 
 After a successful startup the *washboard* should look similar to the following screenshot:
@@ -53,6 +63,20 @@ After a successful startup the *washboard* should look similar to the following 
 ![washboard after successful launch](images/washboard.png "washboard after successful launch")
 
 </div>
+
+Once the application is up and running, issue requests of the following kind:
+
+```bash
+curl -v -X POST 0.0.0.0:8078/model/challenger/index/0 -d '{"tensorType":{"ttype":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+```
+
+The response should comprise `HTTP/1.1 200 OK` as well as `{"result":{"hasError":false},"tensor":{"tensorType":{"ttype":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}}`
+
+The following happens:
+
+1. The http __*POST*__ sends a request for a model with name *"challenger"*, index `0` and some data.
+2. A response is computed. The result is sent back.
+3. The `data` in the request equals `data` in the response because the pre-loaded model "*challenger*" is one that yields as output what it got as input.
 
 ## Creation of new bindles
 

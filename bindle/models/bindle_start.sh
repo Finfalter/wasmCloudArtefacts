@@ -1,11 +1,11 @@
 #!/bin/bash
 
-URL="${1:-http://localhost:8079/v1/}"
+URL="${1:-"http://localhost:8080/v1/"}"
 BINDLE_SERVER="${2:-~/dev/rust/bindle/target/debug/bindle-server}"
 
 export BINDLE_URL=$URL
 
-echo "BINDLE_URL is set to '${URL}'"
+echo "BINDLE_URL is set to '${BINDLE_URL}'"
 echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
 
 # Do not forget to clean bindle's cache:

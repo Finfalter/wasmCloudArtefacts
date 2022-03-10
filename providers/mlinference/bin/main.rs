@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     provider_main(MlinferenceProvider::default())?;
 
     if std::env::var("BINDLE_URL").is_err() {
+        log::error!("No 'BINDLE_URL' defined, verify your bindle url.");
         return Err("No 'BINDLE_URL' defined, verify your bindle url.".into())
     }
 
@@ -76,8 +77,12 @@ impl ProviderHandler for MlinferenceProvider {
 impl MlinferenceProvider {
     async fn put_link_sub(&self, ld: &LinkDefinition) -> Result<bool, RpcError> 
     {
+        log::debug!("put_link_sub() - link definition is '{:?}'", ld);
+        
         let settings = load_settings(&ld.values)
             .map_err(|e| RpcError::ProviderInit(e.to_string()))?;
+
+        log::debug!("put_link_sub() - just passed 'load_settings()'");
 
         let mut model_zoo: ModelZoo = ModelZoo::new();
         
@@ -89,9 +94,16 @@ impl MlinferenceProvider {
             });
         });
 
+        log::debug!("put_link_sub() - available content in modelzoo: '{:?}'", &model_zoo);
+
         let bindle_client: Client<NoToken> = BindleLoader::provide("BINDLE_URL")
             .await
-            .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
+            .map_err(|error| {
+                log::error!("put_link_sub() no 'BINDLE_URL' found");
+                RpcError::ProviderInit(format!("{}", error))
+            })?;
+
+        log::debug!("put_link_sub() - NOT done yet");
 
         for (_, context) in model_zoo.iter_mut() 
         {           
@@ -117,8 +129,12 @@ impl MlinferenceProvider {
             context.graph_execution_context = gec;
         }
 
-        let mut actor_lock = self.actors.write().await;
-        actor_lock.insert(ld.actor_id.to_string(), model_zoo);
+        {
+            let mut actor_lock = self.actors.write().await;
+            actor_lock.insert(ld.actor_id.to_string(), model_zoo);
+        }
+
+        log::debug!("put_link_sub() - DONE");
 
         Ok(true)
     }
@@ -130,7 +146,7 @@ impl MlinferenceProvider {
 impl Mlinference for MlinferenceProvider {
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> 
-    {   
+    {      
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None    => {
@@ -151,7 +167,9 @@ impl Mlinference for MlinferenceProvider {
             Some(v) => v,
             None    => {
                 let ir = get_default_inference_result(Some(MlError{err: 6}));
-                log::error!("predict() returns early because no corresponding actor found!");
+                log::error!("predict() - returning early because no corresponding actor was found!");
+                log::error!("predict() - actor supposed to be found '{}'", &actor);
+                log::error!("predict() - available content in modelzoo: '{:?}'", &ar);
                 return Ok(ir);
             }
         };
@@ -160,7 +178,7 @@ impl Mlinference for MlinferenceProvider {
             Some(m) => m,
             None    => {
                 let ir = get_default_inference_result(Some(MlError{err: 6}));
-                log::error!("predict() returns early because no corresponding model found!");
+                log::error!("predict() - returning early because no corresponding model found!");
                 return Ok(ir);
             }
         };
@@ -168,22 +186,28 @@ impl Mlinference for MlinferenceProvider {
         match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
             Ok(_)    => {},
             Err(e)   => {
-                log::error!("predict() inference engine failed in 'set_input()' with '{}'",e);
+                log::error!("predict() - inference engine failed in 'set_input()' with '{}'", e);
                 return Ok(get_default_inference_result(Some(MlError{err: 6})));
             }
         }
 
         match self.engine.compute(model_context.graph_execution_context).await {
             Ok(_)    => {},
-            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+            Err(_)   => {
+                log::error!("predict() - GraphExecutionContext not found");
+                return Ok(get_default_inference_result(Some(MlError{err: 6})));
+            }
         }
 
         let result = match self.engine.get_output(model_context.graph_execution_context, index).await {
             Ok(r)    => r,
-            Err(_)   => return Ok(get_default_inference_result(Some(MlError{err: 6})))
+            Err(_)   => {
+                log::error!("predict() - could not gather results from 'get_output()'");
+                return Ok(get_default_inference_result(Some(MlError{err: 6})));
+            }
         };
 
-        log::debug!("predict() returns according to plan with result: {:?}",&result);
+        log::debug!("predict() - PASSED, result is '{:?}'", &result);
 
         Ok(result)
     }

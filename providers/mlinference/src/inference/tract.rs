@@ -59,8 +59,7 @@ impl InferenceEngine for TractEngine {
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
-        log::debug!(
-            "load() - inserting graph: {:#?} with size {:#?}",
+        log::debug!("load() - inserting graph: {:#?} with size {:#?}",
             graph,
             model_bytes.len()
         );
@@ -92,6 +91,7 @@ impl InferenceEngine for TractEngine {
         let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
 
         let gec = state.key(state.executions.keys());
+
         log::debug!(
             "init_execution_context() - inserting graph execution context: {:#?}",
             gec
@@ -136,7 +136,10 @@ impl InferenceEngine for TractEngine {
 
         match execution.input_tensors {
             Some(ref mut input_arrays) => {
+                // __CB__2022-03-10 re-evaluate next line
+                input_arrays.clear();
                 input_arrays.push(input);
+                
                 log::debug!(
                     "set_input() - input arrays now contains {} items",
                     input_arrays.len(),
@@ -153,7 +156,7 @@ impl InferenceEngine for TractEngine {
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
     {       
         let mut state = self.state.write().await;
-        let mut execution = match state.executions.get_mut(&context) {
+        let execution = match state.executions.get_mut(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -193,19 +196,21 @@ impl InferenceEngine for TractEngine {
             .into_runnable()?
             .run(input_tensors.into())?;
 
-        log::debug!(
-            "compute() - output tensors contains {} elements",
-            output_tensors.len()
-        );
-        match execution.output_tensors {
-            Some(_) => {
-                log::error!("compute: existing data in output_tensors, aborting");
-                return Err(InferenceError::RuntimeError);
-            }
-            None => {
-                execution.output_tensors = Some(output_tensors.into_iter().collect());
-            }
-        };
+        log::debug!("compute() - output tensors contains {} elements", output_tensors.len());
+        
+        // __CB__2022-03-10 re-evaluate next line
+        execution.output_tensors.replace(output_tensors.into_iter().collect());
+        
+        // match execution.output_tensors {
+        //     Some(_) => {
+        //         log::error!("compute() - existing data in output_tensors, aborting");
+        //         return Err(InferenceError::RuntimeError);
+        //     }
+        //     None => {
+        //         execution.output_tensors = Some(output_tensors.into_iter().collect());
+        //     }
+        // };
+
         Ok(())
     }
 
@@ -232,12 +237,16 @@ impl InferenceEngine for TractEngine {
         let output_tensors = match execution.output_tensors {
             Some(ref oa) => oa,
             None         => {
-                log::error!("get_output() - output_tensors for session is none. Perhaps you haven't called compute yet?");
+                log::error!(
+                    "get_output() - output_tensors for session is none. 
+                    Perhaps you haven't called compute yet?"
+                );
                 return Err(InferenceError::RuntimeError);
             }
         };
 
         let tensor = match output_tensors.get(index as usize) {
+        //let tensor = match output_tensors.remove(index as usize) {
             Some(a) => a,
             None    => {
                 log::error!(

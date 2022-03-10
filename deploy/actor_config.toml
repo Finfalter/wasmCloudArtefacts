@@ -1,2 +1,6 @@
+# values here will be passed as config_b64
 [values]
-models = {zoo = { challenger = "identity_model/0.2.0"}}
+lazy_load = false
+
+[models]
+zoo = { challenger = "identity_model/0.2.0"}

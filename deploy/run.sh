@@ -10,9 +10,9 @@ cat <<_SHOW_HELP
    $0 wipe                         - stop everything and erase all secrets
 
   Bindle:
-   $0 start-bindle                 - set parameters and start the bindle server
-   $0 create-bindle                - upload an invoice and corresponding parcels
-   $0 stop-bindle                  - kill all bindle instances
+   $0 bindle-start                 - set parameters and start the bindle server
+   $0 bindle-create                - upload an invoice and corresponding parcels
+   $0 bindle-stop                  - kill all bindle instances
 
   Host/actor controls:
    $0 inventory                    - show host inventory
@@ -35,6 +35,7 @@ BINDLE_SHUTDOWN_SCRIPT="../bindle/models/bindle_stop.sh"
 
 # set this to match the path of your bindle installation
 BINDLE_HOME=~/dev/rust/bindle
+export BINDLE_URL=http://localhost:8080/v1/
 
 ##
 #   WASMCLOUD HOST
@@ -45,7 +46,7 @@ BINDLE_HOME=~/dev/rust/bindle
 WASMCLOUD_HOST_HOME=~/dev/wasmcloud/wasmCloudHost
 
 # for 'stop-application.sh'
-export WASMCLOUD_HOST_HOME=$WASMCLOUD_HOST_HOME
+WASMCLOUD_HOST_HOME=$WASMCLOUD_HOST_HOME
 
 ##
 #   CAPABILITY PROVIDERS
@@ -102,6 +103,9 @@ __WIPE
     echo -n "going to stop wasmCloud host .."
 
     $WASMCLOUD_HOST_HOME/bin/wasmcloud_host stop
+
+    ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs kill
+    ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs kill
 }
 
 create_seed() {
@@ -143,13 +147,22 @@ start_bindle() {
     echo "\n[bindle-server startup]"
 
     result=$(validate_variable "$BINDLE_HOME")
-
     if [ ! "$result"=0 ]; then 
         echo "'BINDLE_HOME' is invalid or not set, aborting .."
         exit 1;
+    else
+        echo "BINDLE_HOME is set to '${BINDLE_HOME}'"
     fi
 
-    eval '"$BINDLE_CONFIGURATION_SCRIPT" http://localhost:8081/v1/ ${BINDLE_HOME}/target/debug/bindle-server'
+    result=$(validate_variable "$BINDLE_URL")
+    if [ ! "$result"=0 ]; then 
+        echo "'BINDLE_URL' is invalid or not set, aborting .."
+        exit 1;
+    else
+        echo "BINDLE_URL is set to '${BINDLE_URL}'"
+    fi
+
+    eval '"$BINDLE_CONFIGURATION_SCRIPT" ${BINDLE_URL} ${BINDLE_HOME}/target/debug/bindle-server'
 }
 
 stop_bindle() {
@@ -172,7 +185,7 @@ create_bindle() {
         exit 1;
     fi
 
-    eval '"$BINDLE_CREATION_SCRIPT" http://localhost:8081/v1/ ${BINDLE_HOME}/target/debug/bindle'
+    eval '"$BINDLE_CREATION_SCRIPT" ${BINDLE_URL} ${BINDLE_HOME}/target/debug/bindle'
 }
 
 # get the host id (requires wasmcloud to be running)
@@ -243,7 +256,7 @@ link_providers() {
     # link inferenceapi actor to mlinference provider
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
     wash ctl link put $_actor_id $MLINFERENCE_ID     \
-        wasmcloud:interfaces:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
+        wasmcloud:example:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
 }
 
 show_inventory() {
@@ -302,9 +315,9 @@ case $1 in
     wipe ) wipe_all ;;
     start ) start_services ;;
     inventory ) show_inventory ;;
-    start-bindle ) start_bindle ;;
-    stop-bindle ) stop_bindle ;;
-    create-bindle ) create_bindle ;;
+    bindle-start ) start_bindle ;;
+    bindle-stop ) stop_bindle ;;
+    bindle-create ) create_bindle ;;
     start-providers ) start_providers ;;
     link-providers ) link_providers ;;
     run-all | all ) run_all ;;

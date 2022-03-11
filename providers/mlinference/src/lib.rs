@@ -14,7 +14,7 @@ pub mod inference;
 pub use inference::{
     ExecutionTarget,
     Graph, GraphEncoding, GraphExecutionContext, 
-    TractEngine, ModelState, TType, InferenceEngine,
+    TractEngine, TType, InferenceEngine,
     f32_vec_to_bytes, bytes_to_f32_vec};
 
 mod settings;

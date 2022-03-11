@@ -50,10 +50,6 @@ impl GraphEncoding {
     pub const GRAPH_ENCODING_ONNX:     u8 = 1;
 }
 
-// /// GraphBuilder
-// #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-// pub struct GraphBuilder(pub Vec<u8>);
-
 /// GraphExecutionContext
 #[derive(Copy, Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GraphExecutionContext(u32);

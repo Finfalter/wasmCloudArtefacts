@@ -34,8 +34,9 @@ impl TractSession {
 }
 
 #[derive(Default, Clone)]
+//#[derive(Default)]
 pub struct TractEngine {
-    state: Arc<RwLock<ModelState>>
+    state: ModelState
 }
 
 #[async_trait]
@@ -55,18 +56,21 @@ impl InferenceEngine for TractEngine {
             log::error!("load current implementation can only load ONNX models");
             return Err(InferenceError::InvalidEncodingError);
         }
+
+        let mut models = self.state.models.write().await;
+
         let model_bytes = builder.to_vec();
-        let mut state = self.state.write().await;
-        let graph = state.key(state.models.keys());
+
+        let graph = self.state.key(models.keys());
 
         log::debug!("load() - inserting graph: {:#?} with size {:#?}",
             graph,
             model_bytes.len()
         );
 
-        state.models.insert(graph, model_bytes);
+        models.insert(graph, model_bytes);
 
-        log::debug!("load() - current number of models: {:#?}", state.models.len());
+        log::debug!("load() - current number of models: {:#?}", models.len());
 
         Ok(graph)
     }
@@ -75,8 +79,10 @@ impl InferenceEngine for TractEngine {
     {
         log::debug!("init_execution_context() - graph: {:#?}", graph);
 
-        let mut state = self.state.write().await;
-        let mut model_bytes = match state.models.get(&graph) 
+        let models = self.state.models.read().await;
+        let mut executions  = self.state.executions.write().await;
+
+        let mut model_bytes = match models.get(&graph) 
         {
             Some(mb) => Cursor::new(mb),
             None => {
@@ -90,16 +96,14 @@ impl InferenceEngine for TractEngine {
 
         let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
 
-        let gec = state.key(state.executions.keys());
+        let gec = self.state.key(executions.keys());
 
         log::debug!(
             "init_execution_context() - inserting graph execution context: {:#?}",
             gec
         );
 
-        state
-            .executions
-            .insert(gec, TractSession::with_graph(model));
+        executions.insert(gec, Arc::new(RwLock::new(TractSession::with_graph(model))));
 
         Ok(gec)
     }
@@ -108,9 +112,10 @@ impl InferenceEngine for TractEngine {
     async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()> 
     {
         log::debug!("entering set_input() with context: {:?}, index: {}, tensor: {:?}", &context, index, tensor);
-        
-        let mut state = self.state.write().await;
-        let execution = match state.executions.get_mut(&context) {
+
+        let executions  = self.state.executions.read().await;
+
+        let execution = match executions.get(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -121,20 +126,22 @@ impl InferenceEngine for TractEngine {
             }
         };
 
+        let mut tract_session = execution.write().await;
+
         let shape = tensor
             .dimensions
             .iter()
             .map(|d| *d as usize)
             .collect::<Vec<_>>();
 
-        execution.graph.set_input_fact(
+        tract_session.graph.set_input_fact(
             index as usize,
             InferenceFact::dt_shape(f32::datum_type(), shape.clone()))?;
 
         let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
         let input: TractTensor = Array::from_shape_vec(shape, data)?.into();
 
-        match execution.input_tensors {
+        match tract_session.input_tensors {
             Some(ref mut input_arrays) => {
                 // __CB__2022-03-10 re-evaluate next line
                 input_arrays.clear();
@@ -146,7 +153,7 @@ impl InferenceEngine for TractEngine {
                 );
             }
             None => {
-                execution.input_tensors = Some(vec![input]);
+                tract_session.input_tensors = Some(vec![input]);
             }
         };
         Ok(())
@@ -155,8 +162,9 @@ impl InferenceEngine for TractEngine {
     /// compute()
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
     {       
-        let mut state = self.state.write().await;
-        let execution = match state.executions.get_mut(&context) {
+        let executions  = self.state.executions.read().await;
+
+        let execution = match executions.get(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -168,12 +176,14 @@ impl InferenceEngine for TractEngine {
             }
         };
 
+        let mut tract_session = execution.write().await;
+
         // TODO
         //
         // There are two `.clone()` calls here that could prove
         // to be *very* inneficient, one in getting the input tensors,
         // the other in making the model runnable.
-        let input_tensors: Vec<TractTensor> = execution
+        let input_tensors: Vec<TractTensor> = tract_session
             .input_tensors
             .as_ref()
             .unwrap_or(&vec![])
@@ -189,7 +199,7 @@ impl InferenceEngine for TractEngine {
         // Some ONNX models don't specify their input tensor
         // shapes completely, so we can only call `.into_optimized()` after we
         // have set the input tensor shapes.
-        let output_tensors = execution
+        let output_tensors = tract_session
             .graph
             .clone()
             .into_optimized()?
@@ -199,7 +209,7 @@ impl InferenceEngine for TractEngine {
         log::debug!("compute() - output tensors contains {} elements", output_tensors.len());
         
         // __CB__2022-03-10 re-evaluate next line
-        execution.output_tensors.replace(output_tensors.into_iter().collect());
+        tract_session.output_tensors.replace(output_tensors.into_iter().collect());
         
         // match execution.output_tensors {
         //     Some(_) => {
@@ -221,8 +231,9 @@ impl InferenceEngine for TractEngine {
         index: u32
     ) -> InferenceResult<InferenceOutput> 
     {
-        let state = self.state.read().await;
-        let execution = match state.executions.get(&context) {
+        let executions  = self.state.executions.read().await;
+
+        let execution = match executions.get(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -234,7 +245,9 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let output_tensors = match execution.output_tensors {
+        let tract_session = execution.read().await;
+
+        let output_tensors = match tract_session.output_tensors {
             Some(ref oa) => oa,
             None         => {
                 log::error!(
@@ -270,13 +283,59 @@ impl InferenceEngine for TractEngine {
         Ok(io)
     }
 
+    /// infer
+    async fn infer(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<InferenceOutput>
+    {
+        // let executions  = self.state.executions.read().await;
+
+        // let execution = match executions.get(&context) {
+        //     Some(s) => s,
+        //     None => {
+        //         log::error!(
+        //             "set_input() - cannot find session in state with context {:#?}",
+        //             context
+        //         );
+        //         return Err(InferenceError::RuntimeError);
+        //     }
+        // };
+
+        // let mut tract_session = execution.write().await;
+        
+        match self.set_input(context, index, tensor).await {
+            Ok(_)    => {},
+            Err(e)   => {
+                log::error!("set_input() - failed with '{}'", e);
+                return Err(InferenceError::RuntimeError);
+            }
+        }
+
+        match self.compute(context).await {
+            Ok(_)    => {},
+            Err(e)   => {
+                log::error!("compute() - failed with '{}'", e);
+                return Err(InferenceError::RuntimeError);
+            }
+        }
+
+        let result = match self.get_output(context, index).await {
+            Ok(r)    => r,
+            Err(e)   => {
+                log::error!("get_output() - failed with '{}'", e);
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        Ok(result)
+    }
+
     /// remove model state
     async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext) 
     {
-        let mut state = self.state.write().await;
+        let mut models = self.state.models.write().await;
+        let mut executions  = self.state.executions.write().await;
 
-        state.models.remove(graph);
-        state.executions.remove(gec);
+        models.remove(graph);
+        executions.remove(gec);
     }
 }
 
@@ -294,21 +353,6 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
 
     v.into_iter().collect()
 }
-
-// pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
-//     //let chunks: Vec<&[u8]> = data.chunks(4).collect();
-//     let chunks = data.chunks(4);
-//     //let v: Vec<Result<f32>> = chunks
-//     let v = chunks
-//         .into_iter()
-//         .map(|c| {
-//             let mut rdr = Cursor::new(c);
-//             Ok(rdr.read_f32::<LittleEndian>()?)
-//         });
-//         //.collect();
-
-//     v.collect()
-// }
 
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();

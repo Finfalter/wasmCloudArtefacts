@@ -183,29 +183,37 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
-            Ok(_)    => {},
-            Err(e)   => {
-                log::error!("predict() - inference engine failed in 'set_input()' with '{}'", e);
-                return Ok(get_default_inference_result(Some(MlError{err: 6})));
-            }
-        }
-
-        match self.engine.compute(model_context.graph_execution_context).await {
-            Ok(_)    => {},
-            Err(_)   => {
-                log::error!("predict() - GraphExecutionContext not found");
-                return Ok(get_default_inference_result(Some(MlError{err: 6})));
-            }
-        }
-
-        let result = match self.engine.get_output(model_context.graph_execution_context, index).await {
+        let result = match self.engine.infer(model_context.graph_execution_context, index, tensor_in).await {
             Ok(r)    => r,
-            Err(_)   => {
-                log::error!("predict() - could not gather results from 'get_output()'");
+            Err(e)   => {
+                log::error!("infer() - failed with '{}'", e);
                 return Ok(get_default_inference_result(Some(MlError{err: 6})));
             }
         };
+
+        // match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
+        //     Ok(_)    => {},
+        //     Err(e)   => {
+        //         log::error!("predict() - inference engine failed in 'set_input()' with '{}'", e);
+        //         return Ok(get_default_inference_result(Some(MlError{err: 6})));
+        //     }
+        // }
+
+        // match self.engine.compute(model_context.graph_execution_context).await {
+        //     Ok(_)    => {},
+        //     Err(_)   => {
+        //         log::error!("predict() - GraphExecutionContext not found");
+        //         return Ok(get_default_inference_result(Some(MlError{err: 6})));
+        //     }
+        // }
+
+        // let result = match self.engine.get_output(model_context.graph_execution_context, index).await {
+        //     Ok(r)    => r,
+        //     Err(_)   => {
+        //         log::error!("predict() - could not gather results from 'get_output()'");
+        //         return Ok(get_default_inference_result(Some(MlError{err: 6})));
+        //     }
+        // };
 
         log::debug!("predict() - PASSED, result is '{:?}'", &result);
 

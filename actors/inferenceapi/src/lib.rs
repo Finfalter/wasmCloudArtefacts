@@ -3,7 +3,7 @@ use serde_json;
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
-use wasmcloud_interface_mlinference::{Mlinference, MlinferenceSender, InferenceOutput, InferenceRequest, Tensor};
+use wasmcloud_interface_mlinference::{Mlinference, MlinferenceSender, InferenceRequest, Tensor};
 
 //const INFERENCE_ACTOR: &str = "mlinference/predict";
 

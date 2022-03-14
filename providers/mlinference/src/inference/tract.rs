@@ -34,7 +34,6 @@ impl TractSession {
 }
 
 #[derive(Default, Clone)]
-//#[derive(Default)]
 pub struct TractEngine {
     state: ModelState
 }
@@ -109,24 +108,24 @@ impl InferenceEngine for TractEngine {
     }
 
     /// set_input
-    async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()> 
+    async fn set_input<'a>(&self, tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>, index: u32, tensor: &'a Tensor) -> InferenceResult<()> 
     {
-        log::debug!("entering set_input() with context: {:?}, index: {}, tensor: {:?}", &context, index, tensor);
+        log::debug!("entering set_input()");
 
-        let executions  = self.state.executions.read().await;
+        // let executions  = self.state.executions.read().await;
 
-        let execution = match executions.get(&context) {
-            Some(s) => s,
-            None => {
-                log::error!(
-                    "set_input() - cannot find session in state with context {:#?}",
-                    context
-                );
-                return Err(InferenceError::RuntimeError);
-            }
-        };
+        // let execution = match executions.get(&context) {
+        //     Some(s) => s,
+        //     None => {
+        //         log::error!(
+        //             "set_input() - cannot find session in state with context {:#?}",
+        //             context
+        //         );
+        //         return Err(InferenceError::RuntimeError);
+        //     }
+        // };
 
-        let mut tract_session = execution.write().await;
+        // let mut tract_session = execution.write().await;
 
         let shape = tensor
             .dimensions
@@ -160,23 +159,24 @@ impl InferenceEngine for TractEngine {
     }
 
     /// compute()
-    async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
+    //async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> 
+    async fn compute<'a>(&self, tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>) -> InferenceResult<()> 
     {       
-        let executions  = self.state.executions.read().await;
+        // let executions  = self.state.executions.read().await;
 
-        let execution = match executions.get(&context) {
-            Some(s) => s,
-            None => {
-                log::error!(
-                    "compute() - cannot find session in state with context {:#?}",
-                    context
-                );
+        // let execution = match executions.get(&context) {
+        //     Some(s) => s,
+        //     None => {
+        //         log::error!(
+        //             "compute() - cannot find session in state with context {:#?}",
+        //             context
+        //         );
 
-                return Err(InferenceError::RuntimeError);
-            }
-        };
+        //         return Err(InferenceError::RuntimeError);
+        //     }
+        // };
 
-        let mut tract_session = execution.write().await;
+        // let mut tract_session = execution.write().await;
 
         // TODO
         //
@@ -225,27 +225,27 @@ impl InferenceEngine for TractEngine {
     }
 
     /// get_output
-    async fn get_output(
+    async fn get_output<'a>(
         &self,
-        context: GraphExecutionContext,
+        tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>,
         index: u32
-    ) -> InferenceResult<InferenceOutput> 
+    ) -> InferenceResult<InferenceOutput>
     {
-        let executions  = self.state.executions.read().await;
+        // let executions  = self.state.executions.read().await;
 
-        let execution = match executions.get(&context) {
-            Some(s) => s,
-            None => {
-                log::error!(
-                    "compute() - cannot find session in state with context {:#?}",
-                    context
-                );
+        // let execution = match executions.get(&context) {
+        //     Some(s) => s,
+        //     None => {
+        //         log::error!(
+        //             "compute() - cannot find session in state with context {:#?}",
+        //             context
+        //         );
 
-                return Err(InferenceError::RuntimeError);
-            }
-        };
+        //         return Err(InferenceError::RuntimeError);
+        //     }
+        // };
 
-        let tract_session = execution.read().await;
+        // let tract_session = execution.read().await;
 
         let output_tensors = match tract_session.output_tensors {
             Some(ref oa) => oa,
@@ -286,22 +286,29 @@ impl InferenceEngine for TractEngine {
     /// infer
     async fn infer(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<InferenceOutput>
     {
-        // let executions  = self.state.executions.read().await;
-
-        // let execution = match executions.get(&context) {
-        //     Some(s) => s,
-        //     None => {
-        //         log::error!(
-        //             "set_input() - cannot find session in state with context {:#?}",
-        //             context
-        //         );
-        //         return Err(InferenceError::RuntimeError);
-        //     }
-        // };
-
-        // let mut tract_session = execution.write().await;
+        log::debug!("infer() - START");
         
-        match self.set_input(context, index, tensor).await {
+        let executions  = self.state.executions.read().await;
+
+        let execution = match executions.get(&context) {
+            Some(s) => s,
+            None => {
+                log::error!(
+                    "set_input() - cannot find session in state with context {:#?}",
+                    context
+                );
+                return Err(InferenceError::RuntimeError);
+            }
+        };
+
+        let mut tract_session = execution.write().await;
+        
+        // let locks = self.state.locks.write().await;
+        // let lock = locks.get(&context).unwrap();
+        // let _lock_guard = lock.write().await;
+
+        //match self.set_input(context, index, tensor).await {
+        match self.set_input(&mut tract_session, index, tensor).await {
             Ok(_)    => {},
             Err(e)   => {
                 log::error!("set_input() - failed with '{}'", e);
@@ -309,7 +316,9 @@ impl InferenceEngine for TractEngine {
             }
         }
 
-        match self.compute(context).await {
+        log::debug!("infer() - PASSED set_input()");
+
+        match self.compute(&mut tract_session).await {
             Ok(_)    => {},
             Err(e)   => {
                 log::error!("compute() - failed with '{}'", e);
@@ -317,13 +326,17 @@ impl InferenceEngine for TractEngine {
             }
         }
 
-        let result = match self.get_output(context, index).await {
+        log::debug!("infer() - PASSED compute()");
+
+        let result = match self.get_output(&mut tract_session, index).await {
             Ok(r)    => r,
             Err(e)   => {
                 log::error!("get_output() - failed with '{}'", e);
                 return Err(InferenceError::RuntimeError);
             }
         };
+
+        log::debug!("infer() - END");
 
         Ok(result)
     }

@@ -4,7 +4,7 @@ pub use tract::{TractSession, TractEngine, f32_vec_to_bytes, bytes_to_f32_vec};
 use wasmcloud_interface_mlinference::{ Tensor, TensorType, InferenceOutput };
 
 use tokio::sync::RwLock;
-use std::sync::Arc;
+use std::sync::{Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -119,8 +119,9 @@ impl From<TType> for TensorType {
 
 #[derive(Default, Clone)]
 pub struct ModelState {
+    //locks:      Arc<RwLock<BTreeMap<GraphExecutionContext, Arc<RwLock<u32>>>>>,
     executions: Arc<RwLock<BTreeMap<GraphExecutionContext, Arc<RwLock<TractSession>>>>>,
-    models: Arc<RwLock<BTreeMap<Graph, Vec<u8>>>>,
+    models:     Arc<RwLock<BTreeMap<Graph, Vec<u8>>>>,
 }
 
 impl ModelState {
@@ -143,21 +144,21 @@ pub trait InferenceEngine {
 
     async fn load(&self, builder: &[u8], encoding: &GraphEncoding, target: &ExecutionTarget) -> InferenceResult<Graph>;
     async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>;
-    async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()>;
-    async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()>;
-    async fn get_output(
-        &self,
-        context: GraphExecutionContext,
-        index: u32
-    ) -> InferenceResult<InferenceOutput>;
-
-    // async fn set_input(&self, tract_session: tokio::sync::RwLockWriteGuard<TractSession>, index: u32, tensor: &Tensor) -> InferenceResult<()>;
-    // async fn compute(&self, tract_session: tokio::sync::RwLockWriteGuard<TractSession>) -> InferenceResult<()>;
+    //async fn set_input(&self, context: GraphExecutionContext, index: u32, tensor: &Tensor) -> InferenceResult<()>;
+    //async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()>;
     // async fn get_output(
     //     &self,
-    //     tract_session: tokio::sync::RwLockWriteGuard<TractSession>,
+    //     context: GraphExecutionContext,
     //     index: u32
     // ) -> InferenceResult<InferenceOutput>;
+
+    async fn set_input <'a>(&self, tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>, index: u32, tensor: &'a Tensor) -> InferenceResult<()>;
+    async fn compute   <'a>(&self, tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>) -> InferenceResult<()>;
+    async fn get_output<'a>(
+        &self,
+        tract_session: &'a mut tokio::sync::RwLockWriteGuard<TractSession>,
+        index: u32
+    ) -> InferenceResult<InferenceOutput>;
 
     async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
 }

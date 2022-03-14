@@ -11,6 +11,7 @@ use wasmcloud_provider_mlinference::{
     TractEngine, InferenceEngine, Graph, GraphExecutionContext, BindleLoader
 };
 use tokio::sync::RwLock;
+use tokio::task;
 use bindle::{client::{Client, tokens::NoToken}};
 
 use wasmbus_rpc::provider::prelude::*;
@@ -183,13 +184,32 @@ impl Mlinference for MlinferenceProvider {
             }
         };
 
-        let result = match self.engine.infer(model_context.graph_execution_context, index, tensor_in).await {
-            Ok(r)    => r,
-            Err(e)   => {
-                log::error!("infer() - failed with '{}'", e);
-                return Ok(get_default_inference_result(Some(MlError{err: 6})));
-            }
-        };
+
+        let result = task::spawn_blocking(|| async {
+            // This is running on a thread where blocking is fine.
+            println!("Inside spawn_blocking");
+
+            let result = match self.engine.infer(model_context.graph_execution_context, index, tensor_in).await {
+                Ok(r)    => r,
+                Err(e)   => {
+                    log::error!("infer() - failed with '{}'", e);
+                    return get_default_inference_result(Some(MlError{err: 6}));
+                }
+            };
+            return result;
+        }).await;
+
+
+
+        // let result = match self.engine.infer(model_context.graph_execution_context, index, tensor_in).await {
+        //     Ok(r)    => r,
+        //     Err(e)   => {
+        //         log::error!("infer() - failed with '{}'", e);
+        //         return Ok(get_default_inference_result(Some(MlError{err: 6})));
+        //     }
+        // };
+
+
 
         // match self.engine.set_input(model_context.graph_execution_context, index, tensor_in).await {
         //     Ok(_)    => {},
@@ -215,8 +235,8 @@ impl Mlinference for MlinferenceProvider {
         //     }
         // };
 
-        log::debug!("predict() - PASSED, result is '{:?}'", &result);
+        //log::debug!("predict() - PASSED, result is '{:?}'", &result);
 
-        Ok(result)
+        Ok(result.unwrap())
     }
 }

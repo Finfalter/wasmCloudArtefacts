@@ -1,4 +1,4 @@
-// This file is generated automatically using wasmcloud/weld-codegen 0.3.3
+// This file is generated automatically using wasmcloud/weld-codegen 0.4.2
 
 #[allow(unused_imports)]
 use async_trait::async_trait;
@@ -648,7 +648,11 @@ pub trait Mlinference {
 #[doc(hidden)]
 #[async_trait]
 pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
-    async fn dispatch(&self, ctx: &Context, message: &Message<'_>) -> RpcResult<Message<'_>> {
+    async fn dispatch<'disp__, 'ctx__, 'msg__>(
+        &'disp__ self,
+        ctx: &'ctx__ Context,
+        message: &Message<'msg__>,
+    ) -> Result<Message<'msg__>, RpcError> {
         match message.method {
             "Predict" => {
                 let value: InferenceRequest = wasmbus_rpc::common::deserialize(&message.arg)
@@ -723,7 +727,7 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 
     /// Constructs a client for sending to a Mlinference provider
     /// implementing the 'wasmcloud:example:mlinference' capability contract, with the specified link name
-    pub fn new_with_link(link_name: &str) -> wasmbus_rpc::RpcResult<Self> {
+    pub fn new_with_link(link_name: &str) -> wasmbus_rpc::error::RpcResult<Self> {
         let transport = wasmbus_rpc::actor::prelude::WasmHost::to_provider(
             "wasmcloud:example:mlinference",
             link_name,

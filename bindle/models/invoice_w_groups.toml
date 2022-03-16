@@ -27,7 +27,7 @@ label.size = 112
 conditions.memberOf = ["model"]
 
 [[parcel]]
-label.sha256 = 'a21f9949bc87bb2eaf8508872be52ed1b6aaf4b4f8d546ac8254777818c53b09'
+label.sha256 = 'cf87f4ee466b58f1f096185bfbb162d8a6f493dce760cfb157fbb6373ad87921'
 label.mediaType = 'application/json'
 label.name = 'identity_input_output.json'
 label.size = 189

@@ -110,7 +110,6 @@ __WIPE
 
     # clear bindle cache
     rm -rf ~/.cache/bindle ~/Library/Caches/bindle
-    rm -rf ~/.bindle/bindles
 }
 
 create_seed() {

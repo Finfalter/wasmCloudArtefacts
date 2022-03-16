@@ -115,7 +115,10 @@ impl MlinferenceProvider {
             let downloads =
                 BindleLoader::get_model_and_metadata(&bindle_client, &context.bindle_url)
                     .await
-                    .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
+                    .map_err(|error| {
+                        log::error!("get_model_and_metadata() failed!");
+                        RpcError::ProviderInit(format!("{}", error))
+                    })?;
 
             let (metadata, model_data_bytes) = downloads;
 

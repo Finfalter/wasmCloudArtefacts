@@ -4,7 +4,7 @@ use wasmcloud_interface_mlinference::*;
 use wasmcloud_test_util::{
     check,
     cli::print_test_results,
-    provider_test::{test_provider,Provider},
+    provider_test::{test_provider, Provider},
     testing::{TestOptions, TestResult},
 };
 #[allow(unused_imports)]
@@ -22,7 +22,7 @@ async fn get_environment() -> (MlinferenceSender<Provider>, Context) {
     let client = MlinferenceSender::via(prov);
     let ctx = Context::default();
 
-    return (client, ctx);
+    (client, ctx)
 }
 
 #[tokio::test]
@@ -67,24 +67,29 @@ async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
-        tensor_type: TensorType { ttype: 0},
+        tensor_type: TensorType { ttype: 0 },
         dimensions: tensor_shape,
-        data: tensor_data
+        data: tensor_data,
     };
 
     let ir = InferenceRequest {
         model: "challenger".to_string(),
         tensor: t,
-        index: 0
+        index: 0,
     };
 
     let predict_result = env.0.predict(&env.1, &ir).await?;
 
     println!("test_one() with result {:?}", predict_result);
 
-    assert_eq!(tensor_data_cloned, predict_result.tensor.data, "Output data should be the same as input data");
-    assert_eq!(tensor_shape_cloned, predict_result.tensor.dimensions, "Output shape should be the same as input shape");
+    assert_eq!(
+        tensor_data_cloned, predict_result.tensor.data,
+        "Output data should be the same as input data"
+    );
+    assert_eq!(
+        tensor_shape_cloned, predict_result.tensor.dimensions,
+        "Output shape should be the same as input shape"
+    );
 
     Ok(())
 }
-

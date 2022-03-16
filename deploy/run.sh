@@ -1,5 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env bash
 set -e
+
+_DIR=$(dirname ${BASH_SOURCE[0]})
 
 show_help() {
 cat <<_SHOW_HELP
@@ -17,6 +19,7 @@ cat <<_SHOW_HELP
   Host/actor controls:
    $0 inventory                    - show host inventory
 
+Custom environment variables and paths should be set in ${_DIR}/env
 _SHOW_HELP
 }
 
@@ -24,29 +27,23 @@ _SHOW_HELP
 ## START CONFIGURATION
 ## ---------------------------------------------------------------
 
+# define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
+source $_DIR/env
+
 ##
 #   BINDLE
 ## 
 
 # do NOT touch unless you know what you do
-BINDLE_CONFIGURATION_SCRIPT="../bindle/models/bindle_start.sh"
-BINDLE_CREATION_SCRIPT="../bindle/models/bindle_create.sh"
-BINDLE_SHUTDOWN_SCRIPT="../bindle/models/bindle_stop.sh"
-
-# set this to match the path of your bindle installation
-BINDLE_HOME=~/dev/rust/bindle
-export BINDLE_URL=http://localhost:8080/v1/
+BINDLE_CONFIGURATION_SCRIPT="${_DIR}/../bindle/models/bindle_start.sh"
+BINDLE_CREATION_SCRIPT="${_DIR}/../bindle/models/bindle_create.sh"
+BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/models/bindle_stop.sh"
 
 ##
 #   WASMCLOUD HOST
 ##
 
-# following a recommendation, wasmCloud host is NOT started in a container
-# provide the path to wasmCloud here
-WASMCLOUD_HOST_HOME=~/dev/wasmcloud/wasmCloudHost
-
-# for 'stop-application.sh'
-WASMCLOUD_HOST_HOME=$WASMCLOUD_HOST_HOME
+# (defined in env)
 
 ##
 #   CAPABILITY PROVIDERS
@@ -86,6 +83,10 @@ ALL_SECRET_FILES="$SECRETS $CLUSTER_SEED"
 ## END CONFIGURATION
 ## ---------------------------------------------------------------
 
+host_cmd() {
+    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host $@
+}
+
 # stop docker and wipe all data (database, nats cache, host provider/actors, etc.)
 wipe_all() {
 
@@ -102,15 +103,19 @@ __WIPE
 
     echo -n "going to stop wasmCloud host .."
 
-    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host stop
+    host_cmd stop
 
     ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs kill
     ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs kill
+
+    # clear bindle cache
+    rm -rf ~/.cache/bindle ~/Library/Caches/bindle
+    rm -rf ~/.bindle/bindles
 }
 
 create_seed() {
     local _seed_type=$1
-    wash key gen -o json $_seed_type | jq -r '.seed'
+    wash keys gen -o json $_seed_type | jq -r '.seed'
 }
 
 create_secrets() {
@@ -128,49 +133,28 @@ __SECRETS
     chmod 600 $ALL_SECRET_FILES
 }
 
-validate_variable() {
-    echo -n "Parameter '$1' is .. "
-
-    if [ -n "${1+set}" ] && [ -d $1 ] 
-    then
-        echo "valid"
-        local return=0
-    else
-        echo "NOT found"
-        echo "please use '${1}' to provide a valid path to your bindle servers"
-        local return=2
-    fi
-    echo "$return"
-}
-
 start_bindle() {
     echo "\n[bindle-server startup]"
 
-    result=$(validate_variable "$BINDLE_HOME")
-    if [ ! "$result"=0 ]; then 
-        echo "'BINDLE_HOME' is invalid or not set, aborting .."
-        exit 1;
-    else
-        echo "BINDLE_HOME is set to '${BINDLE_HOME}'"
+    if [ -z "$BINDLE_SERVER" ] || [ ! -x $BINDLE_SERVER ]; then
+      echo "You must define BINDLE_HOME or BINDLE_SERVER"
+      exit 1
     fi
+    echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
 
-    result=$(validate_variable "$BINDLE_URL")
-    if [ ! "$result"=0 ]; then 
-        echo "'BINDLE_URL' is invalid or not set, aborting .."
-        exit 1;
-    else
-        echo "BINDLE_URL is set to '${BINDLE_URL}'"
+    if [ -z "$BINDLE_URL" ];  then
+      echo "You must define BINDLE_URL"
+      exit 1
     fi
+    echo "BINDLE_URL is set to '${BINDLE_URL}'"
 
-    eval '"$BINDLE_CONFIGURATION_SCRIPT" ${BINDLE_URL} ${BINDLE_HOME}/target/debug/bindle-server'
+    eval '"$BINDLE_CONFIGURATION_SCRIPT"'
 }
 
 stop_bindle() {
     echo "\n[bindle-server shutdown]"
 
     eval '"$BINDLE_SHUTDOWN_SCRIPT"'
-
-    echo "done"
 }
 
 create_bindle() {   
@@ -178,14 +162,11 @@ create_bindle() {
 
     echo "\n[bindle creation]"
 
-    result=$(validate_variable "$BINDLE_HOME")
-
-    if [ ! "$result"=0 ]; then 
-        echo "'BINDLE_HOME' is invalid or not set, aborting .."
-        exit 1;
+    if [ -z "$BINDLE" ] || [ ! -x $BINDLE ]; then
+      echo "You must define BINDLE_HOME or BINDLE"
+      exit 1
     fi
-
-    eval '"$BINDLE_CREATION_SCRIPT" ${BINDLE_URL} ${BINDLE_HOME}/target/debug/bindle'
+    eval '"$BINDLE_CREATION_SCRIPT"'
 }
 
 # get the host id (requires wasmcloud to be running)
@@ -219,10 +200,8 @@ start_services() {
 
     echo "starting wasmCloud host .."
 
-    # start wasmCloud host
-    #$WASMCLOUD_HOST_HOME/bin/wasmcloud_host foreground
-    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host start
-
+    # start wasmCloud host in background
+    host_cmd start
 }
 
 # start wasmcloud capability providers
@@ -232,8 +211,8 @@ start_providers() {
 
     echo "starting capability provider 'mlinference:0.1.0' to your local registry .."
 
-  	wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+	  wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
 }
 
 # base-64 encode file into a string
@@ -315,11 +294,12 @@ case $1 in
     wipe ) wipe_all ;;
     start ) start_services ;;
     inventory ) show_inventory ;;
-    bindle-start ) start_bindle ;;
-    bindle-stop ) stop_bindle ;;
-    bindle-create ) create_bindle ;;
+    bindle-start | start-bindle ) start_bindle ;;
+    bindle-stop | stop-bindle ) stop_bindle ;;
+    bindle-create | create-bindle ) create_bindle ;;
     start-providers ) start_providers ;;
     link-providers ) link_providers ;;
+    host ) shift; host_cmd $@ ;;
     run-all | all ) run_all ;;
 
     * ) show_help && exit 1 ;;

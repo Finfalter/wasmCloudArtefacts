@@ -124,7 +124,10 @@ impl MlinferenceProvider {
 
             context
                 .load_metadata(metadata)
-                .map_err(|e| RpcError::InvalidParameter(format!("{:?}", e)))?;
+                .map_err(|error| {
+                    log::error!("load_metadata() failed!");
+                    RpcError::InvalidParameter(format!("{:?}", error))
+                })?;
 
             let graph: Graph = self
                 .engine

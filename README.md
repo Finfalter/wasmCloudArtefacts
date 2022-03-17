@@ -31,22 +31,30 @@ The script tries to launch __nats__ and __registry__ via `docker compose`. Follo
 
 ### Configuration
 
-Depending on the respective [link definition](https://wasmcloud.dev/reference/host-runtime/links/), the capability provider tries to download artifacts from the bindle-server. You have to upload these artifacts first in order to make them downloadable by the capability provider. The following command uploads a pre-configured bindle. You have to call it only once.
+Start with a modification of paths in file `deploy/env`. This file is the only one which is necessary to modify in order to get a basic example up and running.
 
-`./deploy/run.sh create-bindle`
+While starting up, the capability provider which comprises the inference engine tries to download artifacts from a bindle-server. You have to upload these artifacts first in order to make them downloadable by the capability provider. The following command uploads a pre-configured bindle. You have to call it only once.
+
+```bash
+./deploy/run.sh create-bindle
+```
 
 The definition of the bindle, `invoice_w_groups.toml`, and its two parcels, `identity_input_output.json` and `identity_input_output.onnx` are located in `/bindle/models`.
 
 ### Launch
 
-Except the bindle-server, all entities are considered and started by using option `all`. Start the bindle-server first, then the other entities:
+Except the bindle-server, all entities are considered and started by using option `all`. Start the bindle-server first, then the other entities. To display all subcommands run `run.sh` without arguments.
 
 ```bash
 cd deploy
-# the leading dot will execute the script in the context of the calling shell
-# there are a few variable exports in that script which would be missed otherwise
-. ./run.sh bindle-start
 
+# display all available subcommands
+./run.sh
+
+# start bindle-server
+./run.sh bindle-start
+
+# launch the application
 ./run.sh all
 
 # execute next line to stop the application (except bindle server)
@@ -86,20 +94,3 @@ The capability provider assumes a bindle to comprise two parcels where each parc
 * __*metadata*__
 
 The first, `model`, is assumed to comprise model data, e.g. an ONNX model. The second, `metadata`, is currently assumed to be json containing the metadata of the model. In case you create new bindles, make sure to assign these two groups.
-
-## Status Quo
-
-- [x] contract between Inference Engine capability provider (IE) and Inference actor (I)
-- [x] dummy version of Inference Engine capability provider (IE) able to receive parameters via LinkDefinition
-- [x] basic unittests
-- [x] dummy version of Inference Engine capability provider (IE) able to download things from a bindle server
-- [x] modification and integration of former WASI NN *like* functionality
-- [x] API Actor (inferenceapi)
-- [ ] tests
-- [x] build and deployment scripts
-
-
-## Further requirements (roadmap)
-
-- [ ] The contract should be ready to process an array of Tensors.
-- [ ] The `engine` in `MlinferenceProvider` shall be a *union* of concrete inference engines

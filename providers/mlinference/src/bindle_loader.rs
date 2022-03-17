@@ -87,7 +87,7 @@ impl BindleLoader {
                 BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
             })?;
         log::info!(
-            "successfully downloaded model {} of size {}",
+            "successfully downloaded model '{}' of size {}",
             model_parcel.label.name,
             model_data_blob.len()
         );

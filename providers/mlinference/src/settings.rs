@@ -61,14 +61,6 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
         &settings
     );
 
-    // if let Some(cj) = values.get("config_b64") {
-    //     settings = serde_json::from_slice(
-    //             &base64::decode(cj)
-    //                 .map_err(|_| RpcError::ProviderInit("invalid config_base64 encoding".into()))?,
-    //         )
-    //         .map_err(|e| RpcError::ProviderInit(format!("invalid json config: {}", e)))?;
-    // }
-
     log::debug!("load_settings() -2--------------");
     log::debug!(
         "load_settings() -2b------------- '{:?}'",

@@ -1,4 +1,9 @@
 # customize environment, and system-specific urls and file paths
+# not that changes to this file will not be tracked.
+# This behavior may be configured with 
+#   git update-index --assume-unchanged deploy/env
+#   git update-index --no-assume-unchanged deploy/env
+# see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
 export BINDLE_URL=${BINDLE_URL:-http://localhost:8080/v1/}
 export RUST_LOG=${RUST_LOG:-debug}

@@ -27,31 +27,12 @@ impl HttpServer for InferenceapiActor {
         debug!("Segments: {:?}", segments);
 
         match (req.method.as_ref(), segments.as_slice()) {
-            ("GET", ["vets"]) => Ok(HttpResponse::default()),
-            //("POST", ["model", _model_name, "index", index]) => {
-            // ("POST", ["model", model_name, "index", index]) => {
-            //     Ok(HttpResponse {
-            //         body: format!("Hello model {} with index {}", model_name, index).as_bytes().to_vec(),
-            //         ..Default::default()
-            //     })
-            // },
-            // headers, e.g. the header of a GET request, have size limitations, tpyically ~10k
             ("POST", ["model", model_name, "index", index]) => {
-                //let _x: Tensor = serde_json::from_slice(&req.body).unwrap();
-                //get_prediction(ctx, model_name, index, &req.body).await;
-                //debug!("WHAT WE GOT {:?}", deser(&req.body)?);
-                //debug!("WHAT WE GOT {:?}", &req.body);
                 let tensor: Tensor = deser(&req.body).unwrap();
 
                 debug!("TENSOR: {:?}", &tensor);
 
                 get_prediction(ctx, model_name, index, tensor).await
-
-                // Ok(HttpResponse {
-                //     //body: format!("Hello model {} with index {} and {:?}", model_name, index, &req.body).as_bytes().to_vec(),
-                //     body: format!("Hello model {} with index {}", model_name, index).as_bytes().to_vec(),
-                //     ..Default::default()
-                // })
             }
             (_, _) => {
                 debug!("API request: {:?}", req);
@@ -82,7 +63,6 @@ async fn get_prediction(
         tensor: tensor,
     };
 
-    //let compute_output: InferenceOutput = MlinferenceSender::to_actor(INFERENCE_ACTOR).predict(ctx, &co_re).await?;
     let mls = MlinferenceSender::new();
     let compute_output = mls.predict(ctx, &co_re).await?;
 
@@ -90,7 +70,7 @@ async fn get_prediction(
         HttpResponse::json(compute_output, 200)
     } else {
         Ok(HttpResponse::internal_server_error(
-            format!("compute_output: {:?}", compute_output), //"Failed to compute",
+            format!("compute_output: {:?}", compute_output), 
         ))
     }
 }

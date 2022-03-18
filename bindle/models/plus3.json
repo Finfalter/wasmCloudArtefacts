@@ -1,0 +1,9 @@
+{
+	"model_name":"plus3",
+	"graph_encoding":"tensorflow",
+	"execution_target":"cpu",
+	"tensor_type":"F32",
+	"tensor_dimensions_in":[1, 2, 3],
+	"tensor_dimensions_out":[1, 2, 3]
+}
+

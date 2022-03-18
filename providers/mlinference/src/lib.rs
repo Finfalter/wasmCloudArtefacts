@@ -40,7 +40,7 @@ impl ModelContext {
         self.tensor_type = match metadata.tensor_type.as_str() {
             "F16" => Ok(TType(TType::F16)),
             "F32" => Ok(TType(TType::F32)),
-            "U8" => Ok(TType(TType::U8)),
+            "U8"  => Ok(TType(TType::U8)),
             "I32" => Ok(TType(TType::I32)),
             _ => Err(()),
         }

@@ -1,6 +1,6 @@
 use crate::inference::{
     ExecutionTarget, Graph, GraphEncoding, GraphExecutionContext, InferenceEngine, InferenceError,
-    InferenceResult, ModelState,
+    InferenceResult
 };
 use async_trait::async_trait;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -11,19 +11,23 @@ use tract_onnx::{
     prelude::{Graph as TractGraph, Tensor as TractTensor, *},
     tract_hir::infer::InferenceOp,
 };
+use tract_tensorflow;
+use std::collections::{btree_map::Keys, BTreeMap};
 use wasmcloud_interface_mlinference::{InferenceOutput, ResultStatus, Tensor, TensorType};
 
 #[derive(Debug)]
 pub struct TractSession {
     pub graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>,
+    pub encoding: GraphEncoding,
     pub input_tensors: Option<Vec<TractTensor>>,
     pub output_tensors: Option<Vec<Arc<TractTensor>>>,
 }
 
 impl TractSession {
-    pub fn with_graph(graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>) -> Self {
+    pub fn with_graph(graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>, encoding: GraphEncoding) -> Self {
         Self {
             graph,
+            encoding,
             input_tensors: None,
             output_tensors: None,
         }
@@ -35,21 +39,35 @@ pub struct TractEngine {
     state: Arc<RwLock<ModelState>>,
 }
 
+#[derive(Default)]
+pub struct ModelState {
+    executions: BTreeMap<GraphExecutionContext, TractSession>,
+    models: BTreeMap<Graph, Vec<u8>>,
+}
+
+impl ModelState {
+    /// Helper function that returns the key that is supposed to be inserted next.
+    pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
+        match keys.last() {
+            Some(&k) => {
+                let last: u32 = k.into();
+                K::from(last + 1)
+            }
+            None => K::from(0),
+        }
+    }
+}
+
 #[async_trait]
 impl InferenceEngine for TractEngine {
     /// load
     async fn load(
         &self,
         builder: &[u8],
-        encoding: &GraphEncoding,
         target: &ExecutionTarget,
     ) -> InferenceResult<Graph> {
-        log::debug!("load() - encoding: {:#?}, target: {:#?}", encoding, target);
+        log::debug!("load() - target: {:#?}", target);
 
-        if !matches!(encoding, &GraphEncoding::Onnx) {
-            log::error!("load current implementation can only load ONNX models");
-            return Err(InferenceError::InvalidEncodingError);
-        }
         let model_bytes = builder.to_vec();
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
@@ -70,8 +88,8 @@ impl InferenceEngine for TractEngine {
         Ok(graph)
     }
 
-    async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext> {
-        log::debug!("init_execution_context() - graph: {:#?}", graph);
+    async fn init_execution_context(&self, graph: Graph, encoding: &GraphEncoding) -> InferenceResult<GraphExecutionContext> {
+        log::debug!("init_execution_context() - ENTERING");
 
         let mut state = self.state.write().await;
         let mut model_bytes = match state.models.get(&graph) {
@@ -85,7 +103,28 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
+        let model = match encoding {
+            GraphEncoding::Onnx => {
+                tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap()
+            },
+            GraphEncoding::Tensorflow => {
+                tract_tensorflow::tensorflow().model_for_read(&mut model_bytes).unwrap()
+            },
+            _ => {
+                log::error!("requested encoding '{:?}' is currently not supported", encoding);
+                return Err(InferenceError::InvalidEncodingError);
+            }
+        };
+
+        log::debug!("init_execution_context() - detected encoding: {:?}", encoding);        
+
+        // if !matches!(encoding, &GraphEncoding::Onnx) {
+        //     log::error!("load current implementation can only load ONNX models");
+        //     return Err(InferenceError::InvalidEncodingError);
+        // }
+
+        // let _model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
+        // let model_tf  = tract_tensorflow::tensorflow().model_for_read(&mut model_bytes).unwrap();
 
         let gec = state.key(state.executions.keys());
 
@@ -96,7 +135,7 @@ impl InferenceEngine for TractEngine {
 
         state
             .executions
-            .insert(gec, TractSession::with_graph(model));
+            .insert(gec, TractSession::with_graph(model, encoding.to_owned()));
 
         Ok(gec)
     }

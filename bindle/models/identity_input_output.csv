@@ -1,0 +1,3 @@
+model_identifier,parcel,MIME_type
+identity_model/0.2.0,../models/identity_input_output.json,application/json
+identity_model/0.2.0,../models/identity_input_output.onnx,application/octet-stream

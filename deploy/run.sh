@@ -35,9 +35,9 @@ source $_DIR/env
 ## 
 
 # do NOT touch unless you know what you do
-BINDLE_CONFIGURATION_SCRIPT="${_DIR}/../bindle/models/bindle_start.sh"
-BINDLE_CREATION_SCRIPT="${_DIR}/../bindle/models/bindle_create.sh"
-BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/models/bindle_stop.sh"
+BINDLE_CONFIGURATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_start.sh"
+BINDLE_CREATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_create.sh"
+BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 
 ##
 #   WASMCLOUD HOST

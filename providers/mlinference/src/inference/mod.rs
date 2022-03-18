@@ -1,7 +1,6 @@
 mod tract;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::{btree_map::Keys, BTreeMap};
 pub use tract::{bytes_to_f32_vec, f32_vec_to_bytes, TractEngine, TractSession};
 use wasmcloud_interface_mlinference::{InferenceOutput, Tensor, TensorType};
 
@@ -63,35 +62,18 @@ impl From<TType> for TensorType {
     }
 }
 
-#[derive(Default)]
-pub struct ModelState {
-    executions: BTreeMap<GraphExecutionContext, TractSession>,
-    models: BTreeMap<Graph, Vec<u8>>,
-}
-
-impl ModelState {
-    /// Helper function that returns the key that is supposed to be inserted next.
-    pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
-        match keys.last() {
-            Some(&k) => {
-                let last: u32 = k.into();
-                K::from(last + 1)
-            }
-            None => K::from(0),
-        }
-    }
-}
-
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
     async fn load(
         &self,
         builder: &[u8],
-        encoding: &GraphEncoding,
         target: &ExecutionTarget,
     ) -> InferenceResult<Graph>;
-    async fn init_execution_context(&self, graph: Graph) -> InferenceResult<GraphExecutionContext>;
+    async fn init_execution_context(&self, 
+        graph: Graph,
+        encoding: &GraphEncoding,
+    ) -> InferenceResult<GraphExecutionContext>;
     async fn set_input(
         &self,
         context: GraphExecutionContext,

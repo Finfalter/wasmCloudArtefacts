@@ -1685,6 +1685,7 @@ dependencies = [
  "tract-data",
  "tract-linalg",
  "tract-onnx",
+ "tract-tensorflow",
  "wasmbus-rpc",
  "wasmcloud-test-util",
  "wasmcloud_interface_mlinference",
@@ -3604,6 +3605,46 @@ checksum = "8f2b96c7cefa72342053445d03a1d465b1ea426302faba6d121dd544bc70294f"
 dependencies = [
  "educe",
  "tract-nnef",
+]
+
+[[package]]
+name = "tract-pulse"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07c0c4875091b05ca21313a236aeba6e462f112a2d34b7d984b34d500d451466"
+dependencies = [
+ "downcast-rs",
+ "lazy_static",
+ "tract-pulse-opl",
+]
+
+[[package]]
+name = "tract-pulse-opl"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48ce0f1121da5b616b69d1304754f0282222634ab2c560fe28fbd0cd1f70fbb9"
+dependencies = [
+ "downcast-rs",
+ "lazy_static",
+ "tract-nnef",
+]
+
+[[package]]
+name = "tract-tensorflow"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc904c04346d32fdc46e6faecd55fc22bf2452042848da94904b2c23b100cbd7"
+dependencies = [
+ "bytes",
+ "derive-new",
+ "educe",
+ "log",
+ "mapr",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "tract-hir",
+ "tract-pulse",
 ]
 
 [[package]]

@@ -1,0 +1,3 @@
+model_identifier,parcel,MIME_type
+plus3/0.1.0,../models/plus3.json,application/json
+plus3/0.1.0,../models/plus3.pb,application/octet-stream

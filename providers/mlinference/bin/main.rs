@@ -133,7 +133,6 @@ impl MlinferenceProvider {
                 .engine
                 .load(
                     &model_data_bytes,
-                    &context.graph_encoding,
                     &context.execution_target,
                 )
                 .await
@@ -143,7 +142,7 @@ impl MlinferenceProvider {
 
             let gec: GraphExecutionContext = self
                 .engine
-                .init_execution_context(context.graph)
+                .init_execution_context(context.graph, &context.graph_encoding)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 

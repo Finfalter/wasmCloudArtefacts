@@ -3,4 +3,4 @@
 lazy_load = false
 
 [models]
-zoo = { challenger = "identity_model/0.2.0"}
+zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0"}

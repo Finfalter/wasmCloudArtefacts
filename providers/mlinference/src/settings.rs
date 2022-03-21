@@ -73,7 +73,7 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
             RpcError::ProviderInit(format!("b64 encoding: {}", e))
         })?)
         .map_err(|e| {
-            log::error!("deser failed: {}", &e.to_string());
+            log::error!("deserialization failed: {}", &e.to_string());
             RpcError::ProviderInit(format!(
                 "config_base64 had invalid struct: {}",
                 &e.to_string()

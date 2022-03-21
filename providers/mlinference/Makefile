@@ -4,7 +4,7 @@ CAPABILITY_ID = "wasmcloud:example:mlinference"
 NAME = "mlinference"
 VENDOR = "Acme"
 PROJECT = mlinference
-VERSION = 0.1.0
+VERSION = 0.2.0
 REVISION = 0
 
 include ./provider.mk

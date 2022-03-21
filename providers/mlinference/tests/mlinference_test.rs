@@ -73,7 +73,7 @@ async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     };
 
     let ir = InferenceRequest {
-        model: "challenger".to_string(),
+        model: "identity".to_string(),
         tensor: t,
         index: 0,
     };

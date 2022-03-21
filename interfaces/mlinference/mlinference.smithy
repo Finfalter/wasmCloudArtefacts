@@ -144,29 +144,30 @@ structure ResultStatus {
 
 // union MlError {
 //   @n(0)
-//   INVALID_MODEL: U16,
+//   invalidModel: U16,
     
 //   @n(1)
-//   INVALID_ENCODING: U16,
+//   invalidEncoding: U16,
 
 //   @n(2)
-//   CORRUPT_INPUT_TENSOR: U16,
+//   corruptInputTensor: U16,
 
 //   @n(3)
-//   RUNTIME_ERROR: U16,
+//   runtimeError: U16,
 
 //   @n(4)
-//   OPEN_VINO_ERROR: U16,
+//   openVinoError: U16,
 
 //   @n(5)
-//   ONNX_ERROR: U16,
+//   onnxError: U16,
 
 //   @n(6)
-//   TENSORFLOW_ERROR: U16,
+//   tensorflowError: U16,
 
 //   @n(7)
-//   CONTEXT_NOT_FOUND_ERROR: U16
+//   contextNotFoundError: U16
 // }
+
 
 structure MlError {
   // enum seems to have no impact on the code generator

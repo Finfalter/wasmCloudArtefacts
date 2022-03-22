@@ -26,8 +26,9 @@ contract_id = "wasmcloud:example:mlinference"
 [values]
 lazy_load = false
 
-[models]
-zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0"}
-
 # works with serde_json
-#models = {zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0"}}
+models = {zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0"}}
+
+
+#[models]
+#zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0"}

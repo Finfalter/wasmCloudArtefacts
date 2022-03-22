@@ -1,0 +1,11 @@
+{
+    "models": {
+      "zoo": {
+        "identity": "identity_model/0.2.0",
+        "plus3": "plus3/0.1.0"
+      }
+    },
+    "values": {
+      "lazy_load": false
+    }
+  }

@@ -655,13 +655,10 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
     ) -> Result<Message<'msg__>, RpcError> {
         match message.method {
             "Predict" => {
-                let value: InferenceRequest =
-                    wasmbus_rpc::common::decode(&message.arg, &decode_inference_request)
-                        .map_err(|e| RpcError::Deser(format!("'InferenceRequest': {}", e)))?;
+                let value: InferenceRequest = wasmbus_rpc::common::deserialize(&message.arg)
+                    .map_err(|e| RpcError::Deser(format!("'InferenceRequest': {}", e)))?;
                 let resp = Mlinference::predict(self, ctx, &value).await?;
-                let mut e = wasmbus_rpc::cbor::vec_encoder(true);
-                encode_inference_output(&mut e, &resp)?;
-                let buf = e.into_inner();
+                let buf = wasmbus_rpc::common::serialize(&resp)?;
                 Ok(Message {
                     method: "Mlinference.Predict",
                     arg: Cow::Owned(buf),
@@ -743,9 +740,7 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
     #[allow(unused)]
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
-        let mut e = wasmbus_rpc::cbor::vec_encoder(true);
-        encode_inference_request(&mut e, arg)?;
-        let buf = e.into_inner();
+        let buf = wasmbus_rpc::common::serialize(arg)?;
         let resp = self
             .transport
             .send(
@@ -758,9 +753,8 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             )
             .await?;
 
-        let value: InferenceOutput =
-            wasmbus_rpc::common::decode(&resp, &decode_inference_output)
-                .map_err(|e| RpcError::Deser(format!("'{}': InferenceOutput", e)))?;
+        let value: InferenceOutput = wasmbus_rpc::common::deserialize(&resp)
+            .map_err(|e| RpcError::Deser(format!("'{}': InferenceOutput", e)))?;
         Ok(value)
     }
 }

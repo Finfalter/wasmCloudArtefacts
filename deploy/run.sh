@@ -64,7 +64,7 @@ INFERENCEAPI_ACTOR=../actors/inferenceapi
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
 
-MODEL_CONFIG=actor_config.toml
+MODEL_CONFIG=actor_config.json
 
 # command to base64 encode stdin to stdout
 BASE64_ENC=base64

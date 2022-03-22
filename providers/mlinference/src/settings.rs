@@ -68,7 +68,7 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
     );
 
     if let Some(cj) = values.get("config_b64") {
-        settings = toml::from_slice(&base64::decode(cj).map_err(|e| {
+        settings = serde_json::from_slice(&base64::decode(cj).map_err(|e| {
             log::error!("base64 decode failed: {}", &e.to_string());
             RpcError::ProviderInit(format!("b64 encoding: {}", e))
         })?)

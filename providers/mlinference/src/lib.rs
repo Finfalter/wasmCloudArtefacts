@@ -9,7 +9,7 @@ pub use bindle_loader::{BindleLoader, ModelMetadata};
 pub mod inference;
 pub use inference::{
     bytes_to_f32_vec, f32_vec_to_bytes, ExecutionTarget, Graph, GraphEncoding,
-    GraphExecutionContext, InferenceEngine, TType, TractEngine,
+    GraphExecutionContext, InferenceEngine, TractEngine,
 };
 
 mod settings;
@@ -22,26 +22,38 @@ pub type BindlePath = String;
 pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ModelContext {
     pub bindle_url: BindlePath,
     pub graph_encoding: GraphEncoding,
     pub execution_target: ExecutionTarget,
-    pub tensor_type: TType,
+    pub tensor_type: TensorType,
     pub graph_execution_context: GraphExecutionContext,
     pub graph: Graph,
 }
 
 impl ModelContext {
+    pub fn default() -> ModelContext {
+        ModelContext {
+            bindle_url: Default::default(),
+            graph_encoding: Default::default(),
+            execution_target: Default::default(),
+            tensor_type: TensorType::F32(0),
+            graph_execution_context: Default::default(),
+            graph: Default::default(),
+        }
+    }
+    
+
     /// load metadata
     pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, Error> {
         self.graph_encoding = metadata.graph_encoding;
 
         self.tensor_type = match metadata.tensor_type.as_str() {
-            "F16" => Ok(TType(TType::F16)),
-            "F32" => Ok(TType(TType::F32)),
-            "U8"  => Ok(TType(TType::U8)),
-            "I32" => Ok(TType(TType::I32)),
+            "F16" => Ok(TensorType::F16(0)),
+            "F32" => Ok(TensorType::F32(0)),
+            "U8"  => Ok(TensorType::U8(0)),
+            "I32" => Ok(TensorType::I32(0)),
             _ => Err(()),
         }
         .map_err(|_| Error::InvalidParameter("invalid 'tensor_type'".to_string()))?;
@@ -67,7 +79,7 @@ pub fn get_default_inference_result(ml_error: Option<MlError>) -> InferenceOutpu
     InferenceOutput {
         result: get_result_status(ml_error),
         tensor: Tensor {
-            tensor_type: TensorType { ttype: 0 },
+            tensor_type: TensorType::F32(0),
             dimensions: vec![],
             data: vec![],
         },

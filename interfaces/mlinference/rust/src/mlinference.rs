@@ -20,7 +20,7 @@ use wasmbus_rpc::{
 pub const SMITHY_VERSION: &str = "1.0";
 
 /// InferenceOutput
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct InferenceOutput {
     pub result: ResultStatus,
     pub tensor: Tensor,
@@ -121,7 +121,7 @@ pub fn decode_inference_output(
     };
     Ok(__result)
 }
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct InferenceRequest {
     #[serde(default)]
     pub model: String,
@@ -227,10 +227,16 @@ pub fn decode_inference_request(
     };
     Ok(__result)
 }
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct MlError {
-    #[serde(default)]
-    pub err: u8,
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum MlError {
+    InvalidModel(u16),
+    InvalidEncoding(u16),
+    CorruptInputTensor(u16),
+    RuntimeError(u16),
+    OpenVinoError(u16),
+    OnnxError(u16),
+    TensorflowError(u16),
+    ContextNotFoundError(u16),
 }
 
 // Encode MlError as CBOR and append to output stream
@@ -239,9 +245,42 @@ pub fn encode_ml_error<W: wasmbus_rpc::cbor::Write>(
     e: &mut wasmbus_rpc::cbor::Encoder<W>,
     val: &MlError,
 ) -> RpcResult<()> {
-    e.map(1)?;
-    e.str("err")?;
-    e.u8(val.err)?;
+    // encoding union MlError
+    e.array(2)?;
+    match val {
+        MlError::InvalidModel(v) => {
+            e.u16(0)?;
+            e.u16(*v)?;
+        }
+        MlError::InvalidEncoding(v) => {
+            e.u16(1)?;
+            e.u16(*v)?;
+        }
+        MlError::CorruptInputTensor(v) => {
+            e.u16(2)?;
+            e.u16(*v)?;
+        }
+        MlError::RuntimeError(v) => {
+            e.u16(3)?;
+            e.u16(*v)?;
+        }
+        MlError::OpenVinoError(v) => {
+            e.u16(4)?;
+            e.u16(*v)?;
+        }
+        MlError::OnnxError(v) => {
+            e.u16(5)?;
+            e.u16(*v)?;
+        }
+        MlError::TensorflowError(v) => {
+            e.u16(6)?;
+            e.u16(*v)?;
+        }
+        MlError::ContextNotFoundError(v) => {
+            e.u16(7)?;
+            e.u16(*v)?;
+        }
+    }
     Ok(())
 }
 
@@ -249,53 +288,64 @@ pub fn encode_ml_error<W: wasmbus_rpc::cbor::Write>(
 #[doc(hidden)]
 pub fn decode_ml_error(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<MlError, RpcError> {
     let __result = {
-        let mut err: Option<u8> = None;
-
-        let is_array = match d.datatype()? {
-            wasmbus_rpc::cbor::Type::Array => true,
-            wasmbus_rpc::cbor::Type::Map => false,
-            _ => {
-                return Err(RpcError::Deser(
-                    "decoding struct MlError, expected array or map".to_string(),
-                ))
-            }
-        };
-        if is_array {
-            let len = d.array()?.ok_or_else(|| {
-                RpcError::Deser(
-                    "decoding struct MlError: indefinite array not supported".to_string(),
-                )
-            })?;
-            for __i in 0..(len as usize) {
-                match __i {
-                    0 => err = Some(d.u8()?),
-                    _ => d.skip()?,
-                }
-            }
-        } else {
-            let len = d.map()?.ok_or_else(|| {
-                RpcError::Deser("decoding struct MlError: indefinite map not supported".to_string())
-            })?;
-            for __i in 0..(len as usize) {
-                match d.str()? {
-                    "err" => err = Some(d.u8()?),
-                    _ => d.skip()?,
-                }
-            }
+        // decoding union MlError
+        let len = d.array()?.ok_or_else(|| {
+            RpcError::Deser("decoding union 'MlError': indefinite array not supported".to_string())
+        })?;
+        if len != 2 {
+            return Err(RpcError::Deser(
+                "decoding union 'MlError': expected 2-array".to_string(),
+            ));
         }
-        MlError {
-            err: if let Some(__x) = err {
-                __x
-            } else {
-                return Err(RpcError::Deser(
-                    "missing field MlError.err (#0)".to_string(),
-                ));
-            },
+        match d.u16()? {
+            0 => {
+                let val = d.u16()?;
+                MlError::InvalidModel(val)
+            }
+
+            1 => {
+                let val = d.u16()?;
+                MlError::InvalidEncoding(val)
+            }
+
+            2 => {
+                let val = d.u16()?;
+                MlError::CorruptInputTensor(val)
+            }
+
+            3 => {
+                let val = d.u16()?;
+                MlError::RuntimeError(val)
+            }
+
+            4 => {
+                let val = d.u16()?;
+                MlError::OpenVinoError(val)
+            }
+
+            5 => {
+                let val = d.u16()?;
+                MlError::OnnxError(val)
+            }
+
+            6 => {
+                let val = d.u16()?;
+                MlError::TensorflowError(val)
+            }
+
+            7 => {
+                let val = d.u16()?;
+                MlError::ContextNotFoundError(val)
+            }
+
+            n => {
+                return Err(RpcError::Deser(format!("invalid field number for union 'com.example.interfaces.mlinference#MlError':{}", n)));
+            }
         }
     };
     Ok(__result)
 }
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct ResultStatus {
     #[serde(rename = "hasError")]
     #[serde(default)]
@@ -401,7 +451,7 @@ pub fn decode_result_status(
 }
 /// The tensor's dimensions and type are provided as metadata to a model.
 /// Any metadata shall be associated to the respective model in a blob store.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Tensor {
     #[serde(rename = "tensorType")]
     pub tensor_type: TensorType,
@@ -559,10 +609,12 @@ pub fn decode_tensor_dimensions(
     Ok(__result)
 }
 /// TensorType
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TensorType {
-    #[serde(default)]
-    pub ttype: u8,
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum TensorType {
+    F16(u8),
+    F32(u8),
+    U8(u8),
+    I32(u8),
 }
 
 // Encode TensorType as CBOR and append to output stream
@@ -571,9 +623,26 @@ pub fn encode_tensor_type<W: wasmbus_rpc::cbor::Write>(
     e: &mut wasmbus_rpc::cbor::Encoder<W>,
     val: &TensorType,
 ) -> RpcResult<()> {
-    e.map(1)?;
-    e.str("ttype")?;
-    e.u8(val.ttype)?;
+    // encoding union TensorType
+    e.array(2)?;
+    match val {
+        TensorType::F16(v) => {
+            e.u16(0)?;
+            e.u8(*v)?;
+        }
+        TensorType::F32(v) => {
+            e.u16(1)?;
+            e.u8(*v)?;
+        }
+        TensorType::U8(v) => {
+            e.u16(2)?;
+            e.u8(*v)?;
+        }
+        TensorType::I32(v) => {
+            e.u16(3)?;
+            e.u8(*v)?;
+        }
+    }
     Ok(())
 }
 
@@ -581,50 +650,41 @@ pub fn encode_tensor_type<W: wasmbus_rpc::cbor::Write>(
 #[doc(hidden)]
 pub fn decode_tensor_type(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<TensorType, RpcError> {
     let __result = {
-        let mut ttype: Option<u8> = None;
-
-        let is_array = match d.datatype()? {
-            wasmbus_rpc::cbor::Type::Array => true,
-            wasmbus_rpc::cbor::Type::Map => false,
-            _ => {
-                return Err(RpcError::Deser(
-                    "decoding struct TensorType, expected array or map".to_string(),
-                ))
-            }
-        };
-        if is_array {
-            let len = d.array()?.ok_or_else(|| {
-                RpcError::Deser(
-                    "decoding struct TensorType: indefinite array not supported".to_string(),
-                )
-            })?;
-            for __i in 0..(len as usize) {
-                match __i {
-                    0 => ttype = Some(d.u8()?),
-                    _ => d.skip()?,
-                }
-            }
-        } else {
-            let len = d.map()?.ok_or_else(|| {
-                RpcError::Deser(
-                    "decoding struct TensorType: indefinite map not supported".to_string(),
-                )
-            })?;
-            for __i in 0..(len as usize) {
-                match d.str()? {
-                    "ttype" => ttype = Some(d.u8()?),
-                    _ => d.skip()?,
-                }
-            }
+        // decoding union TensorType
+        let len = d.array()?.ok_or_else(|| {
+            RpcError::Deser(
+                "decoding union 'TensorType': indefinite array not supported".to_string(),
+            )
+        })?;
+        if len != 2 {
+            return Err(RpcError::Deser(
+                "decoding union 'TensorType': expected 2-array".to_string(),
+            ));
         }
-        TensorType {
-            ttype: if let Some(__x) = ttype {
-                __x
-            } else {
-                return Err(RpcError::Deser(
-                    "missing field TensorType.ttype (#0)".to_string(),
-                ));
-            },
+        match d.u16()? {
+            0 => {
+                let val = d.u8()?;
+                TensorType::F16(val)
+            }
+
+            1 => {
+                let val = d.u8()?;
+                TensorType::F32(val)
+            }
+
+            2 => {
+                let val = d.u8()?;
+                TensorType::U8(val)
+            }
+
+            3 => {
+                let val = d.u8()?;
+                TensorType::I32(val)
+            }
+
+            n => {
+                return Err(RpcError::Deser(format!("invalid field number for union 'com.example.interfaces.mlinference#TensorType':{}", n)));
+            }
         }
     };
     Ok(__result)

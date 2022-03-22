@@ -6,7 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
-    InferenceOutput, InferenceRequest, MlError, Mlinference, MlinferenceReceiver,
+    InferenceOutput, InferenceRequest, MlError, Mlinference, MlinferenceReceiver
 };
 use wasmcloud_provider_mlinference::{
     get_default_inference_result, load_settings, BindleLoader, Graph, GraphExecutionContext,
@@ -93,7 +93,7 @@ impl MlinferenceProvider {
                 k.to_string(),
                 ModelContext {
                     bindle_url: v.to_string(),
-                    ..Default::default()
+                    ..ModelContext::default()
                 },
             );
         });
@@ -168,7 +168,7 @@ impl Mlinference for MlinferenceProvider {
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None => {
-                let ir = get_default_inference_result(Some(MlError { err: 3 }));
+                let ir = get_default_inference_result(Some(MlError::RuntimeError(0)));
                 return Ok(ir);
             }
         }
@@ -182,7 +182,7 @@ impl Mlinference for MlinferenceProvider {
         let modelzoo: &ModelZoo = match ar.get(&actor) {
             Some(v) => v,
             None => {
-                let ir = get_default_inference_result(Some(MlError { err: 6 }));
+                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
                 log::error!(
                     "predict() - returning early because no corresponding actor was found!"
                 );
@@ -195,7 +195,7 @@ impl Mlinference for MlinferenceProvider {
         let model_context: ModelContext = match modelzoo.get(model_name) {
             Some(m) => m.clone(),
             None => {
-                let ir = get_default_inference_result(Some(MlError { err: 6 }));
+                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
                 log::error!("predict() - returning early because no corresponding model found!");
                 return Ok(ir);
             }
@@ -216,11 +216,11 @@ impl Mlinference for MlinferenceProvider {
                     "predict() - inference engine failed in 'set_input()' with '{}'",
                     e
                 );
-                return get_default_inference_result(Some(MlError { err: 6 }));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
             }
             if let Err(e) = engine.compute(model_context.graph_execution_context).await {
                 log::error!("predict() - GraphExecutionContext not found: {}", e);
-                return get_default_inference_result(Some(MlError { err: 6 }));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
             }
             match engine
                 .get_output(model_context.graph_execution_context, index)
@@ -229,7 +229,7 @@ impl Mlinference for MlinferenceProvider {
                 Ok(result) => result,
                 Err(_) => {
                     log::error!("predict() - could not gather results from 'get_output()'");
-                    get_default_inference_result(Some(MlError { err: 6 }))
+                    get_default_inference_result(Some(MlError::ContextNotFoundError(0)))
                 }
             }
         })

@@ -9,7 +9,7 @@ pub use bindle_loader::{BindleLoader, ModelMetadata};
 pub mod inference;
 pub use inference::{
     bytes_to_f32_vec, f32_vec_to_bytes, ExecutionTarget, Graph, GraphEncoding,
-    GraphExecutionContext, InferenceEngine, TType, TractEngine,
+    GraphExecutionContext, InferenceEngine, TractEngine,
 };
 
 mod settings;

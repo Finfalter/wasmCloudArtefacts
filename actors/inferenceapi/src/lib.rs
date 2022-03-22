@@ -28,9 +28,13 @@ impl HttpServer for InferenceapiActor {
 
         match (req.method.as_ref(), segments.as_slice()) {
             ("POST", ["model", model_name, "index", index]) => {
-                let tensor: Tensor = deser(&req.body).unwrap();
+                let tensor: Tensor = deser(&req.body)
+                .map_err(|error| {
+                    log::error!("failed to deserialize the input tensor from POST body!");
+                    RpcError::Deser(format!("{}", error))
+                })?;
 
-                debug!("TENSOR: {:?}", &tensor);
+                log::debug!("receiving POST(model_name, index) ..");
 
                 get_prediction(ctx, model_name, index, tensor).await
             }
@@ -49,7 +53,7 @@ async fn get_prediction(
     index: &str,
     tensor: Tensor,
 ) -> RpcResult<HttpResponse> {
-    debug!("TENSOR: {:?}", tensor);
+    debug!("Deserialized input tensor: {:?}", tensor);
 
     if model_name.is_empty() || tensor.data.is_empty() || tensor.dimensions.is_empty() {
         return Ok(HttpResponse::internal_server_error(

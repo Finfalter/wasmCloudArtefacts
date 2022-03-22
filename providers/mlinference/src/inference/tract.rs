@@ -314,7 +314,7 @@ impl InferenceEngine for TractEngine {
                 error: None,
             },
             tensor: Tensor {
-                tensor_type: TensorType { ttype: 0 },
+                tensor_type: TensorType::F32(0),
                 dimensions: tensor
                     .shape()
                     .iter()

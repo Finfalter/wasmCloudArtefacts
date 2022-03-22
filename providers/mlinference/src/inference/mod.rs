@@ -2,7 +2,7 @@ mod tract;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 pub use tract::{bytes_to_f32_vec, f32_vec_to_bytes, TractEngine, TractSession};
-use wasmcloud_interface_mlinference::{InferenceOutput, Tensor, TensorType};
+use wasmcloud_interface_mlinference::{InferenceOutput, Tensor};
 
 /// Graph (model number)
 pub type Graph = u32;
@@ -36,29 +36,6 @@ pub enum ExecutionTarget {
 impl Default for ExecutionTarget {
     fn default() -> Self {
         ExecutionTarget::Cpu
-    }
-}
-
-/// TensorType
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct TType(pub u8);
-
-impl TType {
-    pub const F16: u8 = 0;
-    pub const F32: u8 = 1;
-    pub const U8: u8 = 2;
-    pub const I32: u8 = 3;
-}
-
-impl From<TensorType> for TType {
-    fn from(tt: TensorType) -> TType {
-        TType(tt.ttype)
-    }
-}
-
-impl From<TType> for TensorType {
-    fn from(tt: TType) -> TensorType {
-        TensorType { ttype: tt.0 }
     }
 }
 

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use thiserror::Error as ThisError;
-use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, TENSOR_FLAG_ROW_MAJOR, ValueType};
+use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, ValueType};
 
 mod bindle_loader;
 pub use bindle_loader::{BindleLoader, ModelMetadata};
@@ -43,7 +43,7 @@ impl ModelContext {
             graph: Default::default(),
         }
     }
-    
+
     /// load metadata
     pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, MlError> {
         self.graph_encoding = metadata.graph_encoding;
@@ -59,7 +59,7 @@ impl ModelContext {
 pub fn get_result_status(ml_error_option: Option<MlError>) -> Status {
     match ml_error_option {
         Some(e) => Status::Error(e),
-        None => Status::Success
+        None => Status::Success,
     }
 }
 

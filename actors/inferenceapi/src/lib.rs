@@ -3,7 +3,9 @@ use serde_json;
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
 use wasmcloud_interface_logging::debug;
-use wasmcloud_interface_mlinference::{InferenceRequest, Mlinference, MlinferenceSender, Tensor};
+use wasmcloud_interface_mlinference::{
+    InferenceInput, MlInference, MlInferenceSender, Status, Tensor,
+};
 
 //const INFERENCE_ACTOR: &str = "mlinference/predict";
 
@@ -28,8 +30,7 @@ impl HttpServer for InferenceapiActor {
 
         match (req.method.as_ref(), segments.as_slice()) {
             ("POST", ["model", model_name, "index", index]) => {
-                let tensor: Tensor = deser(&req.body)
-                .map_err(|error| {
+                let tensor: Tensor = deser(&req.body).map_err(|error| {
                     log::error!("failed to deserialize the input tensor from POST body!");
                     RpcError::Deser(format!("{}", error))
                 })?;
@@ -61,21 +62,22 @@ async fn get_prediction(
         ));
     }
 
-    let co_re = InferenceRequest {
+    let co_re = InferenceInput {
         model: model_name.to_string(),
         index: index.parse().unwrap_or(0),
         tensor: tensor,
     };
 
-    let mls = MlinferenceSender::new();
+    let mls = MlInferenceSender::new();
     let compute_output = mls.predict(ctx, &co_re).await?;
 
-    if !compute_output.result.has_error {
-        HttpResponse::json(compute_output, 200)
+    if let Status::Error(e) = compute_output.result {
+        Ok(HttpResponse::internal_server_error(format!(
+            "compute_output: {:?}",
+            e
+        )))
     } else {
-        Ok(HttpResponse::internal_server_error(
-            format!("compute_output: {:?}", compute_output), 
-        ))
+        HttpResponse::json(compute_output, 200)
     }
 }
 

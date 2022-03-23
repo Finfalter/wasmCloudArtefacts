@@ -82,7 +82,7 @@ Once the application is up and running, start to issue requests. Currently, the 
 To trigger a request against the __*identity*__ model, type the following:
 
 ```bash
-curl -v -X POST 0.0.0.0:8078/model/identity/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/model/identity/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
 The response should comprise `HTTP/1.1 200 OK` as well as `{"result":{"hasError":false},"tensor":{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}}`
@@ -99,7 +99,7 @@ The following happens:
 To trigger a request against the __*plus3*__ model, type the following:
 
 ```bash
-curl -v -X POST 0.0.0.0:8078/model/plus3/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
 The response is

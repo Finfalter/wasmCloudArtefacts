@@ -58,17 +58,17 @@ structure InferenceRequest {
 /// Any metadata shall be associated to the respective model in a blob store.
 @codegenRust(noDeriveDefault: true, noDeriveEq: true)
 structure Tensor {
-    @required
-    @n(0)
-    tensorType: TensorType,
+  @required
+  @n(0)
+  tensorType: TensorType,
 
-    @required
-    @n(1)
-    dimensions: TensorDimensions,
+  @required
+  @n(1)
+  dimensions: TensorDimensions,
 
-    @required
-    @n(2)
-    data: Blob
+  @required
+  @n(2)
+  data: Blob
 }
 
 list TensorDimensions {
@@ -81,14 +81,14 @@ union TensorType {
   @n(0)
   F16: U8,
    
-   @n(1)
-   F32: U8,
+  @n(1)
+  F32: U8,
 
-   @n(2)
-   U8: U8,
+  @n(2)
+  U8: U8,
 
-   @n(3)
-   I32: U8,
+  @n(3)
+  I32: U8,
 }
 
 /// InferenceOutput

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+_DIR=$(dirname ${BASH_SOURCE[0]})
 source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
 
 if [ $# -lt 2 ]
@@ -53,7 +54,7 @@ do
     echo "parcel:    $PARCEL"
     echo -n "pushing the parcel .. "
     echo "${BINDLE} push-file -m ${MIME_TYPE} ${MODEL_IDENTIFIER} ${PARCEL}"
-    $BINDLE push-file -m $MIME_TYPE $MODEL_IDENTIFIER $PARCEL
+    $BINDLE push-file -m $MIME_TYPE $MODEL_IDENTIFIER ${_DIR}/$PARCEL
     echo 
     $BINDLE info $MODEL_IDENTIFIER
     echo

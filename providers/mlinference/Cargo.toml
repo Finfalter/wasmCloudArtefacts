@@ -1,6 +1,6 @@
 [package]
 name = "mlinference"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 resolver = "2"
 
@@ -21,8 +21,8 @@ tract-data = "0.16.1"
 tract-linalg = "0.16.1"
 tract-onnx = { version = "0.16.1" }
 tract-tensorflow = "0.16.1"
-wasmbus-rpc = "0.8.3"
-wasmcloud_interface_mlinference = { path="../../interfaces/mlinference/rust" }
+wasmbus-rpc = "0.8.4"
+wasmcloud_interface_mlinference = { path="../../../../wasmcloud/interfaces/ml/rust" }
 
 # test dependencies
 [dev-dependencies]

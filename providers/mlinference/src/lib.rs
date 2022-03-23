@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use thiserror::Error as ThisError;
-use wasmcloud_interface_mlinference::{InferenceOutput, MlError, ResultStatus, Tensor, TensorType};
+use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, ValueType};
 
 mod bindle_loader;
 pub use bindle_loader::{BindleLoader, ModelMetadata};
@@ -27,7 +27,7 @@ pub struct ModelContext {
     pub bindle_url: BindlePath,
     pub graph_encoding: GraphEncoding,
     pub execution_target: ExecutionTarget,
-    pub tensor_type: TensorType,
+    pub value_type: ValueType,
     pub graph_execution_context: GraphExecutionContext,
     pub graph: Graph,
 }
@@ -38,39 +38,28 @@ impl ModelContext {
             bindle_url: Default::default(),
             graph_encoding: Default::default(),
             execution_target: Default::default(),
-            tensor_type: TensorType::F32(0),
+            value_type: ValueType::ValueF32,
             graph_execution_context: Default::default(),
             graph: Default::default(),
         }
     }
-    
 
     /// load metadata
-    pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, Error> {
+    pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, MlError> {
         self.graph_encoding = metadata.graph_encoding;
-
-        self.tensor_type = match metadata.tensor_type.as_str() {
-            "F16" => Ok(TensorType::F16(0)),
-            "F32" => Ok(TensorType::F32(0)),
-            "U8"  => Ok(TensorType::U8(0)),
-            "I32" => Ok(TensorType::I32(0)),
-            _ => Err(()),
-        }
-        .map_err(|_| Error::InvalidParameter("invalid 'tensor_type'".to_string()))?;
-
+        self.value_type = ValueType::try_from(metadata.tensor_type.as_str())
+            .map_err(|e| MlError::InvalidModel(e))?;
         self.execution_target = metadata.execution_target;
 
         Ok(self)
     }
 }
 
-/// generates an error default ResultStatus
-pub fn get_result_status(ml_error_option: Option<MlError>) -> ResultStatus {
-    let with_error = ml_error_option.is_some();
-
-    ResultStatus {
-        has_error: with_error,
-        error: ml_error_option,
+/// generates an error default Status
+pub fn get_result_status(ml_error_option: Option<MlError>) -> Status {
+    match ml_error_option {
+        Some(e) => Status::Error(e),
+        None => Status::Success,
     }
 }
 
@@ -78,11 +67,7 @@ pub fn get_result_status(ml_error_option: Option<MlError>) -> ResultStatus {
 pub fn get_default_inference_result(ml_error: Option<MlError>) -> InferenceOutput {
     InferenceOutput {
         result: get_result_status(ml_error),
-        tensor: Tensor {
-            tensor_type: TensorType::F32(0),
-            dimensions: vec![],
-            data: vec![],
-        },
+        tensor: Tensor::default(),
     }
 }
 

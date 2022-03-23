@@ -6,7 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
-    InferenceOutput, InferenceRequest, MlError, Mlinference, MlinferenceReceiver
+    InferenceOutput, InferenceInput, MlError, MlInference, MlInferenceReceiver
 };
 use wasmcloud_provider_mlinference::{
     get_default_inference_result, load_settings, BindleLoader, Graph, GraphExecutionContext,
@@ -18,7 +18,7 @@ use wasmcloud_provider_mlinference::{
 // and returns only when it receives a shutdown message
 //
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    provider_main(MlinferenceProvider::default())?;
+    provider_main(MlInferenceProvider::default())?;
 
     if std::env::var("BINDLE_URL").is_err() {
         log::error!("No 'BINDLE_URL' defined, verify your bindle url.");
@@ -31,8 +31,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// mlinference capability provider implementation
 #[derive(Default, Clone, Provider)]
-#[services(Mlinference)]
-struct MlinferenceProvider {
+#[services(MlInference)]
+struct MlInferenceProvider {
     /// map to store the assignments between the respective model
     /// and corresponding bindle path for each linked actor
     /// TODO:
@@ -45,10 +45,10 @@ struct MlinferenceProvider {
 }
 
 /// use default implementations of provider message handlers
-impl ProviderDispatch for MlinferenceProvider {}
+impl ProviderDispatch for MlInferenceProvider {}
 
 #[async_trait]
-impl ProviderHandler for MlinferenceProvider {
+impl ProviderHandler for MlInferenceProvider {
     async fn put_link(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         let this = self.clone();
         let ld = ld.clone();
@@ -77,7 +77,7 @@ impl ProviderHandler for MlinferenceProvider {
     }
 }
 
-impl MlinferenceProvider {
+impl MlInferenceProvider {
     async fn put_link_sub(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         log::debug!("put_link_sub() - link definition is '{:?}'", ld);
 
@@ -160,15 +160,15 @@ impl MlinferenceProvider {
     }
 }
 
-/// Handle Mlinference methods
+/// Handle MlInference methods
 #[async_trait]
-impl Mlinference for MlinferenceProvider {
+impl MlInference for MlInferenceProvider {
     /// predict
-    async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
+    async fn predict(&self, ctx: &Context, arg: &InferenceInput) -> RpcResult<InferenceOutput> {
         let actor = match ctx.actor.as_ref() {
             Some(x) => x,
             None => {
-                let ir = get_default_inference_result(Some(MlError::RuntimeError(0)));
+                let ir = get_default_inference_result(Some(MlError::RuntimeError("".into())));
                 return Ok(ir);
             }
         }
@@ -182,7 +182,7 @@ impl Mlinference for MlinferenceProvider {
         let modelzoo: &ModelZoo = match ar.get(&actor) {
             Some(v) => v,
             None => {
-                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
+                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError("".into())));
                 log::error!(
                     "predict() - returning early because no corresponding actor was found!"
                 );
@@ -195,7 +195,7 @@ impl Mlinference for MlinferenceProvider {
         let model_context: ModelContext = match modelzoo.get(model_name) {
             Some(m) => m.clone(),
             None => {
-                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
+                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(model_name.clone())));
                 log::error!("predict() - returning early because no corresponding model found!");
                 return Ok(ir);
             }
@@ -216,20 +216,20 @@ impl Mlinference for MlinferenceProvider {
                     "predict() - inference engine failed in 'set_input()' with '{}'",
                     e
                 );
-                return get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(e.to_string())));
             }
             if let Err(e) = engine.compute(model_context.graph_execution_context).await {
                 log::error!("predict() - GraphExecutionContext not found: {}", e);
-                return get_default_inference_result(Some(MlError::ContextNotFoundError(0)));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(e.to_string())));
             }
             match engine
                 .get_output(model_context.graph_execution_context, index)
                 .await
             {
                 Ok(result) => result,
-                Err(_) => {
+                Err(e) => {
                     log::error!("predict() - could not gather results from 'get_output()'");
-                    get_default_inference_result(Some(MlError::ContextNotFoundError(0)))
+                    get_default_inference_result(Some(MlError::ContextNotFoundError(e.to_string())))
                 }
             }
         })

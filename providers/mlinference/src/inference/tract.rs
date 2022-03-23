@@ -13,7 +13,7 @@ use tract_onnx::{
 };
 use tract_tensorflow;
 use std::collections::{btree_map::Keys, BTreeMap};
-use wasmcloud_interface_mlinference::{InferenceOutput, ResultStatus, Tensor, TensorType};
+use wasmcloud_interface_mlinference::{InferenceOutput, Status, Tensor, ValueType, TENSOR_FLAG_ROW_MAJOR};
 
 #[derive(Debug)]
 pub struct TractSession {
@@ -166,12 +166,7 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let shape = tensor
-            .dimensions
-            .iter()
-            .map(|d| *d as usize)
-            .collect::<Vec<_>>();
-
+        let shape = tensor.shape();
         execution.graph.set_input_fact(
             index as usize,
             InferenceFact::dt_shape(f32::datum_type(), shape.clone()),
@@ -309,18 +304,16 @@ impl InferenceEngine for TractEngine {
         let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
 
         let io = InferenceOutput {
-            result: ResultStatus {
-                has_error: false,
-                error: None,
-            },
+            result: Status::Success ,
             tensor: Tensor {
-                tensor_type: TensorType::F32(0),
+                value_types: vec![ ValueType::ValueF32 ],
                 dimensions: tensor
                     .shape()
                     .iter()
                     .cloned()
                     .map(|i| i as u32)
                     .collect::<Vec<u32>>(),
+                flags: TENSOR_FLAG_ROW_MAJOR,
                 data: bytes,
             },
         };

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+
+_DIR=$(dirname ${BASH_SOURCE[0]})
 source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
 
 # in case there are multiple models to push append lines like the next one
-source ./push_bindle.sh ../models/identity_input_output.toml ../models/identity_input_output.csv
-source ./push_bindle.sh ../models/plus3.toml ../models/plus3.csv
+source ${_DIR}/push_bindle.sh ${_DIR}/../models/identity_input_output.toml ${_DIR}/../models/identity_input_output.csv
+source ${_DIR}/push_bindle.sh ${_DIR}/../models/plus3.toml ${_DIR}/../models/plus3.csv

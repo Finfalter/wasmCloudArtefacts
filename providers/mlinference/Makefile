@@ -1,6 +1,6 @@
 # mlinference Makefile
 
-CAPABILITY_ID = "wasmcloud:example:mlinference"
+CAPABILITY_ID = "wasmcloud:mlinference"
 NAME = "mlinference"
 VENDOR = "Acme"
 PROJECT = mlinference

@@ -18,7 +18,7 @@ serde_json = "1.0"
 wasmbus-rpc = "0.8.4"
 wasmcloud-interface-logging = "0.5.0"
 wasmcloud-interface-httpserver = "0.5"
-wasmcloud_interface_mlinference = { path="../../../../wasmcloud/interfaces/ml/rust" }
+wasmcloud_interface_mlinference = { path="../../../../interfaces/ml/rust" }
 
 [profile.release]
 # Optimize for small code size

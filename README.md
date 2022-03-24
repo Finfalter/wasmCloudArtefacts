@@ -16,6 +16,13 @@ Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/c
 
 From the top-level **directory** build with `make`.
 
+---
+**NOTE**
+
+As of __2022-03-24__, the application will not compile unless you additionally have a local copy of [wasmCloud/interfaces](https://github.com/wasmCloud/interfaces) checked out with branch __*feat/mlinference*__  __and__ the path of __*wasmcloud_interface_mlinference*__ matches its `/interfaces/ml/rust`. Expect that to be corrected soon!
+
+---
+
 ## Deployment
 
 General build artifacts are located in `/deploy`. Bindle specific build artifacts are located in `/bindle/models`. The script `/deploy/run.sh` drives the application. The application comprises a startup and shutdown of the following entities:
@@ -82,10 +89,10 @@ Once the application is up and running, start to issue requests. Currently, the 
 To trigger a request against the __*identity*__ model, type the following:
 
 ```bash
-curl -v POST 0.0.0.0:8078/model/identity/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/model/identity/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
-The response should comprise `HTTP/1.1 200 OK` as well as `{"result":{"hasError":false},"tensor":{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}}`
+The response should comprise `HTTP/1.1 200 OK` as well as `{"result":"Success","tensor":{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}}`
 
 The following happens:
 
@@ -99,13 +106,13 @@ The following happens:
 To trigger a request against the __*plus3*__ model, type the following:
 
 ```bash
-curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
 The response is
 
 ```bash
-{"result":{"hasError":false},"tensor":{"tensorType":{"F32":0},"dimensions":[1,4],"data":[0,0,128,64,0,0,160,64,0,0,192,64,0,0,224,64]}}
+{"result":"Success","tensor":{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,64,0,0,160,64,0,0,192,64,0,0,224,64]}}
 ```
 
 Note that in contrast to the __*identity*__ model, the answer from __*plus3*__ is not at all identical to the request. Converting the vector of bytes `[0,0,128,64,0,0,160,64,0,0,192,64,0,0,224,64]` back to a vector of `f32` yields `[4.0, 5.0, 6.0, 7.0]`. This was expected: each element from the input is incremented by three `[1.0, 2.0, 3.0, 4.0]` &rarr; `[4.0, 5.0, 6.0, 7.0]`, hence the name of the model: __*plus3*__.

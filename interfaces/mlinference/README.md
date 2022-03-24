@@ -1,4 +1,4 @@
-# Interface for the Mlinference service, wasmcloud:example:mlinfernce
+# Interface for the MlInference service, wasmcloud:example:mlinfernce
 
 ## Build the Interface
 

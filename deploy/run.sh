@@ -234,7 +234,7 @@ link_providers() {
     # link inferenceapi actor to mlinference provider
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
     wash ctl link put $_actor_id $MLINFERENCE_ID     \
-        wasmcloud:example:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
+        wasmcloud:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
 }
 
 show_inventory() {

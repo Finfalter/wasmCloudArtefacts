@@ -689,25 +689,25 @@ pub fn decode_tensor_type(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<Tens
     };
     Ok(__result)
 }
-/// The Mlinference service
-/// wasmbus.contractId: wasmcloud:example:mlinference
+/// The MlInference service
+/// wasmbus.contractId: wasmcloud:mlinference
 /// wasmbus.providerReceive
 /// wasmbus.actorReceive
 #[async_trait]
-pub trait Mlinference {
+pub trait MlInference {
     /// returns the capability contract id for this interface
     fn contract_id() -> &'static str {
-        "wasmcloud:example:mlinference"
+        "wasmcloud:mlinference"
     }
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput>;
 }
 
-/// MlinferenceReceiver receives messages defined in the Mlinference service trait
-/// The Mlinference service
+/// MlInferenceReceiver receives messages defined in the MlInference service trait
+/// The MlInference service
 #[doc(hidden)]
 #[async_trait]
-pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
+pub trait MlInferenceReceiver: MessageDispatch + MlInference {
     async fn dispatch<'disp__, 'ctx__, 'msg__>(
         &'disp__ self,
         ctx: &'ctx__ Context,
@@ -718,33 +718,33 @@ pub trait MlinferenceReceiver: MessageDispatch + Mlinference {
                 let value: InferenceRequest =
                     wasmbus_rpc::common::decode(&message.arg, &decode_inference_request)
                         .map_err(|e| RpcError::Deser(format!("'InferenceRequest': {}", e)))?;
-                let resp = Mlinference::predict(self, ctx, &value).await?;
+                let resp = MlInference::predict(self, ctx, &value).await?;
                 let mut e = wasmbus_rpc::cbor::vec_encoder(true);
                 encode_inference_output(&mut e, &resp)?;
                 let buf = e.into_inner();
                 Ok(Message {
-                    method: "Mlinference.Predict",
+                    method: "MlInference.Predict",
                     arg: Cow::Owned(buf),
                 })
             }
             _ => Err(RpcError::MethodNotHandled(format!(
-                "Mlinference::{}",
+                "MlInference::{}",
                 message.method
             ))),
         }
     }
 }
 
-/// MlinferenceSender sends messages to a Mlinference service
-/// The Mlinference service
-/// client for sending Mlinference messages
+/// MlInferenceSender sends messages to a MlInference service
+/// The MlInference service
+/// client for sending MlInference messages
 #[derive(Debug)]
-pub struct MlinferenceSender<T: Transport> {
+pub struct MlInferenceSender<T: Transport> {
     transport: T,
 }
 
-impl<T: Transport> MlinferenceSender<T> {
-    /// Constructs a MlinferenceSender with the specified transport
+impl<T: Transport> MlInferenceSender<T> {
+    /// Constructs a MlInferenceSender with the specified transport
     pub fn via(transport: T) -> Self {
         Self { transport }
     }
@@ -755,7 +755,7 @@ impl<T: Transport> MlinferenceSender<T> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl<'send> MlinferenceSender<wasmbus_rpc::provider::ProviderTransport<'send>> {
+impl<'send> MlInferenceSender<wasmbus_rpc::provider::ProviderTransport<'send>> {
     /// Constructs a Sender using an actor's LinkDefinition,
     /// Uses the provider's HostBridge for rpc
     pub fn for_actor(ld: &'send wasmbus_rpc::core::LinkDefinition) -> Self {
@@ -765,7 +765,7 @@ impl<'send> MlinferenceSender<wasmbus_rpc::provider::ProviderTransport<'send>> {
     }
 }
 #[cfg(target_arch = "wasm32")]
-impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
+impl MlInferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
     /// Constructs a client for actor-to-actor messaging
     /// using the recipient actor's public key
     pub fn to_actor(actor_id: &str) -> Self {
@@ -776,30 +776,26 @@ impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl MlinferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
-    /// Constructs a client for sending to a Mlinference provider
-    /// implementing the 'wasmcloud:example:mlinference' capability contract, with the "default" link
+impl MlInferenceSender<wasmbus_rpc::actor::prelude::WasmHost> {
+    /// Constructs a client for sending to a MlInference provider
+    /// implementing the 'wasmcloud:mlinference' capability contract, with the "default" link
     pub fn new() -> Self {
-        let transport = wasmbus_rpc::actor::prelude::WasmHost::to_provider(
-            "wasmcloud:example:mlinference",
-            "default",
-        )
-        .unwrap();
+        let transport =
+            wasmbus_rpc::actor::prelude::WasmHost::to_provider("wasmcloud:mlinference", "default")
+                .unwrap();
         Self { transport }
     }
 
-    /// Constructs a client for sending to a Mlinference provider
-    /// implementing the 'wasmcloud:example:mlinference' capability contract, with the specified link name
+    /// Constructs a client for sending to a MlInference provider
+    /// implementing the 'wasmcloud:mlinference' capability contract, with the specified link name
     pub fn new_with_link(link_name: &str) -> wasmbus_rpc::error::RpcResult<Self> {
-        let transport = wasmbus_rpc::actor::prelude::WasmHost::to_provider(
-            "wasmcloud:example:mlinference",
-            link_name,
-        )?;
+        let transport =
+            wasmbus_rpc::actor::prelude::WasmHost::to_provider("wasmcloud:mlinference", link_name)?;
         Ok(Self { transport })
     }
 }
 #[async_trait]
-impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for MlinferenceSender<T> {
+impl<T: Transport + std::marker::Sync + std::marker::Send> MlInference for MlInferenceSender<T> {
     #[allow(unused)]
     /// predict
     async fn predict(&self, ctx: &Context, arg: &InferenceRequest) -> RpcResult<InferenceOutput> {
@@ -811,7 +807,7 @@ impl<T: Transport + std::marker::Sync + std::marker::Send> Mlinference for Mlinf
             .send(
                 ctx,
                 Message {
-                    method: "Mlinference.Predict",
+                    method: "MlInference.Predict",
                     arg: Cow::Borrowed(&buf),
                 },
                 None,

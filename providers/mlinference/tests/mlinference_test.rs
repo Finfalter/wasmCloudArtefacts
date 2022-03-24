@@ -12,14 +12,14 @@ use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
 use wasmcloud_provider_mlinference::inference::f32_vec_to_bytes;
 
-async fn get_environment() -> (MlinferenceSender<Provider>, Context) {
+async fn get_environment() -> (MlInferenceSender<Provider>, Context) {
     // create a provider, client and context
     let prov = test_provider().await;
 
     eprintln!("Pausing 5 sec to load model");
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-    let client = MlinferenceSender::via(prov);
+    let client = MlInferenceSender::via(prov);
     let ctx = Context::default();
 
     (client, ctx)
@@ -50,7 +50,7 @@ async fn health_check(_opt: &TestOptions) -> RpcResult<()> {
     Ok(())
 }
 
-/// more tests of the Mlinference interface
+/// more tests of the MlInference interface
 async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
@@ -67,12 +67,13 @@ async fn test_one(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
-        tensor_type: TensorType { ttype: 0 },
+        value_types: vec![ ValueType::ValueF32 ],
         dimensions: tensor_shape,
         data: tensor_data,
+        flags: 0,
     };
 
-    let ir = InferenceRequest {
+    let ir = InferenceInput {
         model: "identity".to_string(),
         tensor: t,
         index: 0,

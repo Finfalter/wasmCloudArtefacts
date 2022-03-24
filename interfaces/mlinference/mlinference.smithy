@@ -16,19 +16,19 @@ use org.wasmcloud.model#F16
 use org.wasmcloud.model#F32
 use org.wasmcloud.model#I32
 
-//! The Mlinference service issues inference requests via an inference engine.
+//! The MlInference service issues inference requests via an inference engine.
 //! It exposes one method:
 //!
 //! - predict()
 
-/// The Mlinference service
+/// The MlInference service
 @wasmbus(
-    contractId: "wasmcloud:example:mlinference",
+    contractId: "wasmcloud:mlinference",
     actorReceive: true,
     providerReceive: true,
     protocol: "2" )
 
-service Mlinference {
+service MlInference {
   version: "0.1",
   operations: [ Predict ]
 }

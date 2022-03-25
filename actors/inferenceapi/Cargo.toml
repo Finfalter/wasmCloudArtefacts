@@ -19,6 +19,7 @@ wasmbus-rpc = "0.8.4"
 wasmcloud-interface-logging = "0.5.0"
 wasmcloud-interface-httpserver = "0.5"
 wasmcloud_interface_mlinference = { path="../../../../interfaces/ml/rust" }
+wasmcloud_interface_mlpreprocessing = { path="../../interfaces/mlpreprocessing/rust" }
 
 [profile.release]
 # Optimize for small code size

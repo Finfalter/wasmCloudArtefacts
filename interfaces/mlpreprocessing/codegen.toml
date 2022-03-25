@@ -1,23 +1,23 @@
 # codegen.toml
 
-# `models` contains a list of smithy model file(s),
-# and folder(s) containing .smithy files, used for input to code generators,
-# documentation generator, and linting and validation.
-# Dependencies of the model should also be included in the `models` list
-# because they will improve documentation and validation.
-#
-# The namespaces(s) that will be generated for this library are indicated
-# in the per-language file settings later in this file.
 [[models]]
-path = "mlpreprocessing.smithy"
+path = "."
+files = [ "mlpreprocessing.smithy" ]
 
 [[models]]
-# Location of dependencies may be either a path to a directory, or a url prefix
-# If a relative path is used, it is relative to the location of this codegen.toml
-#path = "/path/to/my-interfaces"
-url = "https://wasmcloud.github.io/interfaces/idl/org.wasmcloud"
-files = [ "wasmcloud-core.smithy", "wasmcloud-model.smithy" ]
+# wasmbus-core
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@d6ae2dd196aae3c2486e747eb1b3cd188ea71132/core/wasmcloud-core.smithy"
 
+[[models]]
+# wasmbus-model
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@e0f205da8a0e1549497571c3e994a1851480621c/core/wasmcloud-model.smithy"
+
+# Additional namespaces may be added to this library crate by adding
+# a rust source file below for each namespace,
+# and importing each of them into src/lib.rs
+[[rust.files]]
+path = "src/mlpreprocessing.rs"
+namespace = "org.wasmcloud.interface.mlpreprocessing"
 
 ##
 ## HTML documentation output
@@ -38,7 +38,6 @@ output_dir = "html"
 # whether to use minified tailwind.css (default false)
 minified = true
 
-
 ##
 ## Rust language output
 ##
@@ -57,23 +56,4 @@ output_dir = "rust"
 # create_only - whether file should be generated only with --create (default false)
 # namespace - limit generated shapes to shapes in this namespace
 # * - any other fields are per-file parameters passed to codegen and renderer
-
-[[models]]
-path = "."
-files = [ "mlpreprocessing.smithy" ]
-
-[[models]]
-# wasmbus-core
-url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@d6ae2dd196aae3c2486e747eb1b3cd188ea71132/core/wasmcloud-core.smithy"
-
-[[models]]
-# wasmbus-model
-url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@e0f205da8a0e1549497571c3e994a1851480621c/core/wasmcloud-model.smithy"
-
-# Additional namespaces may be added to this library crate by adding
-# a rust source file below for each namespace,
-# and importing each of them into src/lib.rs
-[[rust.files]]
-path = "src/mlpreprocessing.rs"
-namespace = "com.example.interfaces.mlpreprocessing"
 

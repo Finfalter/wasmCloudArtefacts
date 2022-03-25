@@ -4,10 +4,11 @@ use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
 use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_mlinference::{
-    InferenceInput, MlInference, MlInferenceSender, Status, Tensor,
+    InferenceInput, MlInference, MlInferenceSender, Status, Tensor, ValueType
 };
+use wasmcloud_interface_mlpreprocessing::{MlPreprocessingSender, MlPreprocessing, ConversionRequest};
 
-//const INFERENCE_ACTOR: &str = "mlinference/predict";
+const PREPROCESS_ACTOR: &str = "mlinference/imagepreprocessor";
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, HttpServer)]
@@ -29,16 +30,38 @@ impl HttpServer for InferenceapiActor {
         debug!("Segments: {:?}", segments);
 
         match (req.method.as_ref(), segments.as_slice()) {
-            ("POST", ["model", model_name, "index", index]) => {
-                let tensor: Tensor = deser(&req.body).map_err(|error| {
-                    log::error!("failed to deserialize the input tensor from POST body!");
-                    RpcError::Deser(format!("{}", error))
-                })?;
 
-                log::debug!("receiving POST(model_name, index) ..");
+            ("POST", ["model", model_name, "preprocess", _preprocess]) => {
+                log::debug!("receiving POST(model, preprocess) ..");
+                // TODO
+                //let tensor: Tensor = unpack_tensor(&req.body).await?;
+                
+                let convert = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
+                    .convert(ctx, &ConversionRequest { data: req.body.to_owned() })
+                    .await?;
+                
+                let tensor = Tensor {
+                    value_types: vec![ ValueType::ValueF32 ],
+                    dimensions: convert.tensor.dimensions,
+                    data: convert.tensor.data,
+                    flags: convert.tensor.flags,
+                };
+
+                get_prediction(ctx, model_name, "0", tensor).await
+            }
+
+            ("POST", ["model", model_name, "index", index]) => {
+                log::debug!("receiving POST(model, index) ..");
+                
+                // let tensor: Tensor = deser(&req.body).map_err(|error| {
+                //     log::error!("failed to deserialize the input tensor from POST body!");
+                //     RpcError::Deser(format!("{}", error))
+                // })?;
+                let tensor: Tensor = unpack_tensor(&req.body).await?;
 
                 get_prediction(ctx, model_name, index, tensor).await
             }
+
             (_, _) => {
                 debug!("API request: {:?}", req);
                 //Ok(HttpResponse::default())
@@ -46,6 +69,13 @@ impl HttpServer for InferenceapiActor {
             } //(_, _) => Ok(HttpResponse::not_found()),
         }
     }
+}
+
+async fn unpack_tensor(body: &[u8]) -> RpcResult<Tensor> {
+    deser(body).map_err(|error| {
+        log::error!("failed to deserialize the input tensor from POST body!");
+        RpcError::Deser(format!("{}", error))
+    })?
 }
 
 async fn get_prediction(

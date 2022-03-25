@@ -211,7 +211,7 @@ start_providers() {
     echo "starting capability provider 'mlinference:0.1.0' to your local registry .."
 
     wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
-	  wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
+	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
 }
 
 # base-64 encode file into a string

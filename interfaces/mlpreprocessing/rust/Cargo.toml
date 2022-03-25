@@ -1,5 +1,5 @@
 [package]
-name = "test"
+name = "wasmcloud_interface_mlpreprocessing"
 version = "0.1.0"
 description = "Interface library for the test mlpreprocessing capability, "
 authors = [ "" ]

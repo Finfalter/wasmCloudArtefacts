@@ -959,6 +959,7 @@ dependencies = [
  "wasmcloud-interface-httpserver",
  "wasmcloud-interface-logging",
  "wasmcloud_interface_mlinference",
+ "wasmcloud_interface_mlpreprocessing",
 ]
 
 [[package]]
@@ -2719,6 +2720,17 @@ dependencies = [
 
 [[package]]
 name = "wasmcloud_interface_mlinference"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_bytes",
+ "wasmbus-rpc",
+ "weld-codegen",
+]
+
+[[package]]
+name = "wasmcloud_interface_mlpreprocessing"
 version = "0.1.0"
 dependencies = [
  "async-trait",

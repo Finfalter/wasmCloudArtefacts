@@ -2,9 +2,12 @@
 //
 
 // Tell the code generator how to reference symbols defined in this namespace
-metadata package = [ { namespace: "com.example.interfaces.mlpreprocessing", crate: "test" } ]
+metadata package = [ { 
+  namespace: "org.wasmcloud.interface.mlpreprocessing",
+  crate: "wasmcloud_interface_mlinference",
+  } ]
 
-namespace com.example.interfaces.mlpreprocessing
+namespace org.wasmcloud.interface.mlpreprocessing
 
 use org.wasmcloud.model#codegenRust
 use org.wasmcloud.model#wasmbus
@@ -18,7 +21,10 @@ use org.wasmcloud.model#I32
 use org.wasmcloud.model#Unit
 
 /// Description of Mlpreprocessing service
-@wasmbus( actorReceive: true )
+@wasmbus( 
+  actorReceive: true,
+  protocol: "2", 
+)
 service MlPreprocessing {
   version: "0.1",
   operations: [ Convert ]
@@ -45,9 +51,9 @@ structure ConversionRequest {
 }
 
 /// ConversionOutput
-//@codegenRust(noDeriveDefault:true)
+@codegenRust(noDeriveDefault:true)
 structure ConversionOutput {
-
+  
     @required
     @n(0)
     result: Status,

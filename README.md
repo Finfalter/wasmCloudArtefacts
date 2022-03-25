@@ -19,7 +19,7 @@ From the top-level **directory** build with `make`.
 ---
 **NOTE**
 
-As of __2022-03-24__, the application will not compile unless you additionally have a local copy of [wasmCloud/interfaces](https://github.com/wasmCloud/interfaces) checked out with branch __*feat/mlinference*__  __and__ the path of __*wasmcloud_interface_mlinference*__ matches its `/interfaces/ml/rust`. Expect that to be corrected soon!
+As of __2022-03-24__, the application will not compile unless you additionally have a local copy of [wasmCloud/interfaces](https://github.com/wasmCloud/interfaces) checked out with branch __*feat/mlinference*__  __and__ the path of __*wasmcloud_interface_mlinference*__ matches its `/interfaces/ml/rust` in __Cargo.toml__. Expect that to be corrected soon!
 
 ---
 

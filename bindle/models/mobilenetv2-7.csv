@@ -1,0 +1,3 @@
+model_identifier,parcel,MIME_type
+mobilenetv2-7/0.1.0,../models/mobilenetv2-7.json,application/json
+mobilenetv2-7/0.1.0,../models/mobilenetv2-7.onnx,application/octet-stream

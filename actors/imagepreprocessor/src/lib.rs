@@ -1,4 +1,5 @@
 use wasmbus_rpc::actor::prelude::*;
+use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_mlpreprocessing::{
     MlPreprocessing, MlPreprocessingReceiver, Status,
     ConversionOutput, ConversionRequest, Tensor, ValueType};
@@ -20,7 +21,11 @@ impl MlPreprocessing for ImagepreprocessorActor {
 
         // TODO: validate the image, does it have 3 channels? Is it RGB?
 
+        debug!("convert() - BEFORE conversion");
+
         let convert: Vec<u8> = img::preprocess(&image, 244, 244).await?;
+
+        debug!("convert() - AFTER conversion");
 
         let t = Tensor {
             value_types: vec![ ValueType::ValueF32 ],

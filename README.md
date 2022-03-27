@@ -84,7 +84,7 @@ Once the application is up and running, start to issue requests. Currently, the 
 * __*identity*__ of ONNX format
 * __*plus3*__ of Tensorflow format
 
-#### ONNX example
+#### ONNX examples
 
 To trigger a request against the __*identity*__ model, type the following:
 
@@ -100,6 +100,11 @@ The following happens:
 2. `data` is vector `[1.0f32, 2.0, 3.0, 4.0]` converted to a vector of bytes.
 3. A response is computed. The result is sent back.
 4. The `data` in the request equals `data` in the response because the pre-loaded model "*challenger*" is one that yields as output what it got as input.
+
+# __CB__
+```bash
+curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+```
 
 #### Tensorflow example
 

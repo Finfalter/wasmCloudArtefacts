@@ -61,6 +61,9 @@ REG_SERVER=registry:5000
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=../actors/inferenceapi
 
+# __CB__
+PREPROCESSOR_ACTOR=../actors/imagepreprocessor
+
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
 

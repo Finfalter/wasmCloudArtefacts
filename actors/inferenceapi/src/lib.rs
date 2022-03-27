@@ -35,6 +35,7 @@ impl HttpServer for InferenceapiActor {
                 log::debug!("receiving POST(model, preprocess) ..");
                 // TODO
                 //let tensor: Tensor = unpack_tensor(&req.body).await?;
+                log::debug!("receiving POST(model, preprocess) .. {:#?}", req.body);
                 
                 let convert = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
                     .convert(ctx, &ConversionRequest { data: req.body.to_owned() })

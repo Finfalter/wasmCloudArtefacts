@@ -56,6 +56,8 @@ pub async fn preprocess(
     width: u32,
 ) -> RpcResult<Vec<u8>> {
 
+    log::debug!("preprocess() - HERE");
+
     //println!("trying to load image {:#?}", path);
     // let image = Reader::new(Cursor::new(raw_data))
     // .with_guessed_format()?.decode()

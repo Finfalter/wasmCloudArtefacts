@@ -341,21 +341,6 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
         .collect()
 }
 
-// pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
-//     //let chunks: Vec<&[u8]> = data.chunks(4).collect();
-//     let chunks = data.chunks(4);
-//     //let v: Vec<Result<f32>> = chunks
-//     let v = chunks
-//         .into_iter()
-//         .map(|c| {
-//             let mut rdr = Cursor::new(c);
-//             Ok(rdr.read_f32::<LittleEndian>()?)
-//         });
-//         //.collect();
-
-//     v.collect()
-// }
-
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
     log::debug!(

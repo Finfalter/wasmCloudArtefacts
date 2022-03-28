@@ -79,12 +79,23 @@ After a successful startup the *washboard* should look similar to the following 
 
 </div>
 
-Once the application is up and running, start to issue requests. Currently, the repository comprises two pre-configured models, one for each supported inference engine:
+Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
 
 * __*identity*__ of ONNX format
 * __*plus3*__ of Tensorflow format
+* __*mobilenet*__ of ONNX format
+* __*squeezenet*__ of ONNX format
 
-#### ONNX examples
+## Examples
+
+Apart from the underlying inference engine, e.g. ONNX vs. Tensorflow, the pre-configured models differ in a further aspect: concerning the *trivial* models, one may request processing upon arbitrary shapes of one-dimensional data, `[1, n]`. [Mobilenet](https://github.com/onnx/models/tree/main/vision/classification/mobilenet) and [Squeezenet](https://github.com/onnx/models/tree/main/vision/classification/squeezenet), however, have more requirements regarding their respective input tensor. To fulfill these, the respective input tensor of an arbitrary image may be preprocessed before being routed to the inference engine.
+
+The application provides two endpoints. The first endpoint routes the input tensor to the related inference engine without any preprocessing. The second endpoint preprocesses the input tensor and routes it to the related inference engine thereafter:
+
+1. `0.0.0.0:<port>/<model>`, e.g. `0.0.0.0:7078/identity`
+2. `0.0.0.0:<port>/<model>/preprocess`, e.g. `0.0.0.0:7078/squeezenetv117/preprocess`
+
+### Identity Model
 
 To trigger a request against the __*identity*__ model, type the following:
 
@@ -101,12 +112,7 @@ The following happens:
 3. A response is computed. The result is sent back.
 4. The `data` in the request equals `data` in the response because the pre-loaded model "*challenger*" is one that yields as output what it got as input.
 
-# __CB__
-```bash
-curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
-```
-
-#### Tensorflow example
+### Plus3 model
 
 To trigger a request against the __*plus3*__ model, type the following:
 
@@ -121,6 +127,24 @@ The response is
 ```
 
 Note that in contrast to the __*identity*__ model, the answer from __*plus3*__ is not at all identical to the request. Converting the vector of bytes `[0,0,128,64,0,0,160,64,0,0,192,64,0,0,224,64]` back to a vector of `f32` yields `[4.0, 5.0, 6.0, 7.0]`. This was expected: each element from the input is incremented by three `[1.0, 2.0, 3.0, 4.0]` &rarr; `[4.0, 5.0, 6.0, 7.0]`, hence the name of the model: __*plus3*__.
+
+### Mobilenet model
+
+```bash
+# in order for the relative path to match call from directory 'deploy'
+curl -v POST 0.0.0.0:8078/mobilenetv27/preprocess --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
+```
+
+Note that the output tensor is of shape `[1,1000]` and needs to be post-processed where the post-processing is currently not part of the application.
+
+### Squeezenet model
+
+```bash
+# in order for the relative path to match call from directory 'deploy'
+curl -v POST 0.0.0.0:8078/squeezenetv117/preprocess --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
+```
+
+Note that the output tensor is of shape `[1,1000]` and needs to be post-processed where the post-processing is currently not part of the application.
 
 ## Creation of new bindles
 

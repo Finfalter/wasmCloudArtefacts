@@ -31,7 +31,7 @@ impl HttpServer for InferenceapiActor {
 
         match (req.method.as_ref(), segments.as_slice()) {
 
-            ("POST", ["model", model_name, "preprocess", _preprocess]) => {
+            ("POST", [model_name, "preprocess"]) => {
                 debug!("receiving POST(model, preprocess) ..");
                 
                 let convert = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
@@ -48,7 +48,7 @@ impl HttpServer for InferenceapiActor {
                 get_prediction(ctx, model_name, "0", tensor).await
             }
 
-            ("POST", ["model", model_name, "index", index]) => {
+            ("POST", [model_name]) => {
                 
                 debug!("receiving POST(model, index) ..");
                 
@@ -57,7 +57,8 @@ impl HttpServer for InferenceapiActor {
                     RpcError::Deser(format!("{}", error))
                 })?;
 
-                get_prediction(ctx, model_name, index, tensor).await
+                //get_prediction(ctx, model_name, index, tensor).await
+                get_prediction(ctx, model_name, "0", tensor).await
             }
 
             (_, _) => {

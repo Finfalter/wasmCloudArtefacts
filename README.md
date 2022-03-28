@@ -100,7 +100,7 @@ The application provides two endpoints. The first endpoint routes the input tens
 To trigger a request against the __*identity*__ model, type the following:
 
 ```bash
-curl -v POST 0.0.0.0:8078/model/identity/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/identity -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
 The response should comprise `HTTP/1.1 200 OK` as well as `{"result":"Success","tensor":{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}}`
@@ -117,7 +117,7 @@ The following happens:
 To trigger a request against the __*plus3*__ model, type the following:
 
 ```bash
-curl -v POST 0.0.0.0:8078/model/plus3/index/0 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+curl -v POST 0.0.0.0:8078/plus3 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
 ```
 
 The response is

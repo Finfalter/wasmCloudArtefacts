@@ -5,12 +5,8 @@ path = "."
 files = [ "mlpreprocessing.smithy" ]
 
 [[models]]
-# wasmbus-core
-url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@d6ae2dd196aae3c2486e747eb1b3cd188ea71132/core/wasmcloud-core.smithy"
-
-[[models]]
-# wasmbus-model
-url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@e0f205da8a0e1549497571c3e994a1851480621c/core/wasmcloud-model.smithy"
+path = "../../../../interfaces/ml"
+files = [ "mlinference.smithy" ]
 
 # Additional namespaces may be added to this library crate by adding
 # a rust source file below for each namespace,
@@ -18,6 +14,18 @@ url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@e0f205da8a0e1549497571c3
 [[rust.files]]
 path = "src/mlpreprocessing.rs"
 namespace = "org.wasmcloud.interface.mlpreprocessing"
+
+[[rust.files]]
+path = "../../../../interfaces/ml/rust/source/mlinference.rs"
+namespace = "org.wasmcloud.interface.mlinference"
+
+[[models]]
+# wasmbus-core
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@d6ae2dd196aae3c2486e747eb1b3cd188ea71132/core/wasmcloud-core.smithy"
+
+[[models]]
+# wasmbus-model
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@e0f205da8a0e1549497571c3e994a1851480621c/core/wasmcloud-model.smithy"
 
 ##
 ## HTML documentation output

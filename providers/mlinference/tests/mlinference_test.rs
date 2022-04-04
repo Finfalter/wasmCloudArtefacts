@@ -19,7 +19,7 @@ use wasmcloud_test_util::{run_selected, run_selected_spawn};
 use wasmcloud_provider_mlinference::inference::{f32_vec_to_bytes, bytes_to_f32_vec};
 
 pub trait NdArrayTensor<S, T, D> {
-    /// https://en.wikipedia.org/wiki/Softmax_function)
+    /// https://en.wikipedia.org/wiki/Softmax_function
     fn softmax(&self, axis: ndarray::Axis) -> Array<T, D>
     where
         D: ndarray::RemoveAxis,
@@ -322,6 +322,7 @@ async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
         .into_iter()
         .enumerate()
         .collect::<Vec<_>>();
+        
     probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let labels = BufReader::new(std::fs::File::open(LABELS_PATH).unwrap());

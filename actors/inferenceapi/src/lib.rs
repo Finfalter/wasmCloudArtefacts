@@ -70,13 +70,6 @@ impl HttpServer for InferenceapiActor {
                 //     format!("Invalid input arguments: {}", error))
                 // ));
 
-                let tensor = Tensor {
-                    value_types: vec![ ValueType::ValueF32 ],
-                    dimensions: tensor.dimensions,
-                    data: tensor.data,
-                    flags: tensor.flags,
-                };
-
                 //let prediction = get_prediction(ctx, model_name, "0", tensor).await?;
                 let prediction:InferenceOutput = predict(ctx, model_name, tensor).await?;
 

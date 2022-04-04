@@ -2737,6 +2737,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "wasmbus-rpc",
+ "wasmcloud_interface_mlinference",
  "weld-codegen",
 ]
 

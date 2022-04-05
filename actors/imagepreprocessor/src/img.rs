@@ -58,10 +58,6 @@ pub async fn preprocess(
 
     log::debug!("preprocess() - HERE");
 
-    //println!("trying to load image {:#?}", path);
-    // let image = Reader::new(Cursor::new(raw_data))
-    // .with_guessed_format()?.decode()
-    // .map_err(|e| RpcError::Deser(e.to_string()))?;
     let raw_image = load_from_memory(raw_data)
         .map_err(|e| RpcError::Deser(e.to_string()))?;
 

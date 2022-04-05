@@ -2,7 +2,7 @@
 
 [[models]]
 path = "."
-files = [ "mlpreprocessing.smithy" ]
+files = [ "imagenet.smithy" ]
 
 [[models]]
 path = "../../../../interfaces/ml"
@@ -12,8 +12,8 @@ files = [ "mlinference.smithy" ]
 # a rust source file below for each namespace,
 # and importing each of them into src/lib.rs
 [[rust.files]]
-path = "src/mlpreprocessing.rs"
-namespace = "org.wasmcloud.interface.mlpreprocessing"
+path = "src/imagenet.rs"
+namespace = "org.wasmcloud.interface.mlimagenet"
 
 [[rust.files]]
 path = "../../../../interfaces/ml/rust/source/mlinference.rs"

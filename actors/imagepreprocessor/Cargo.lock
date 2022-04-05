@@ -2903,6 +2903,7 @@ dependencies = [
 [[package]]
 name = "wasmcloud_interface_mlinference"
 version = "0.1.0"
+source = "git+https://github.com/wasmCloud/interfaces#9d89d2fb5c337d97c08f6fc3df413545632f3b03"
 dependencies = [
  "async-trait",
  "serde",

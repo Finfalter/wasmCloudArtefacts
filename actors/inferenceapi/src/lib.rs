@@ -4,11 +4,13 @@ use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
 use wasmcloud_interface_logging::{debug};
 use wasmcloud_interface_mlinference::{
-    InferenceInput, InferenceOutput, MlInference, MlInferenceSender, Status, Tensor, ValueType
+    InferenceInput, InferenceOutput, MlInference, MlInferenceSender, Status, Tensor
 };
 use wasmcloud_interface_mlpreprocessing::{MlPreprocessingSender, MlPreprocessing, ConversionRequest};
+use wasmcloud_interface_mlimagenet::{Imagenet, ImagenetSender};
 
 const PREPROCESS_ACTOR: &str = "mlinference/imagepreprocessor";
+const POSTPROCESS_ACTOR:&str = "mlinference/imagenetpostprocessor";
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, HttpServer)]
@@ -83,7 +85,7 @@ impl HttpServer for InferenceapiActor {
                 }
             }
 
-            ("POST", [model_name, "classes"]) => {
+            ("POST", [model_name, "matches"]) => {
                 debug!("receiving POST(model, classes) ..");
                 
                 let preprocessed = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
@@ -98,17 +100,12 @@ impl HttpServer for InferenceapiActor {
                 //     format!("Invalid input arguments: {}", error))
                 // ));
 
-                let tensor = Tensor {
-                    value_types: vec![ ValueType::ValueF32 ],
-                    dimensions: tensor.dimensions,
-                    data: tensor.data,
-                    flags: tensor.flags,
-                };
-
                 //let prediction = get_prediction(ctx, model_name, "0", tensor).await?;
                 let prediction:InferenceOutput = predict(ctx, model_name, tensor).await?;
 
                 // postprocess
+                let postprocessed = ImagenetSender::to_actor(POSTPROCESS_ACTOR)
+                    .postprocess(ctx, &prediction).await?;                
 
                 if let Status::Error(e) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -116,7 +113,7 @@ impl HttpServer for InferenceapiActor {
                         e
                     )))
                 } else {
-                    HttpResponse::json(prediction, 200)
+                    HttpResponse::json(postprocessed, 200)
                 }
             }
 

@@ -958,6 +958,7 @@ dependencies = [
  "wasmbus-rpc",
  "wasmcloud-interface-httpserver",
  "wasmcloud-interface-logging",
+ "wasmcloud_interface_mlimagenet",
  "wasmcloud_interface_mlinference",
  "wasmcloud_interface_mlpreprocessing",
 ]
@@ -2715,6 +2716,18 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "wasmbus-rpc",
+ "weld-codegen",
+]
+
+[[package]]
+name = "wasmcloud_interface_mlimagenet"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_bytes",
+ "wasmbus-rpc",
+ "wasmcloud_interface_mlinference",
  "weld-codegen",
 ]
 

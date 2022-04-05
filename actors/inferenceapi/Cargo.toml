@@ -20,6 +20,7 @@ wasmcloud-interface-logging = "0.5.0"
 wasmcloud-interface-httpserver = "0.5"
 wasmcloud_interface_mlinference = { path="../../../../interfaces/ml/rust" }
 wasmcloud_interface_mlpreprocessing = { path="../../interfaces/mlpreprocessing/rust" }
+wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/rust" }
 
 [profile.release]
 # Optimize for small code size

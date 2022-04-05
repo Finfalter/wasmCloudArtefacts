@@ -253,7 +253,11 @@ pub fn decode_ml_p_error(d: &mut wasmbus_rpc::cbor::Decoder<'_>) -> Result<MlPEr
             }
 
             n => {
-                return Err(RpcError::Deser(format!("invalid field number for union 'org.wasmcloud.interface.mlpreprocessing#MlPError':{}", n)));
+                return Err(RpcError::Deser(format!(
+                    "invalid field number for union \
+                     'org.wasmcloud.interface.mlpreprocessing#MlPError':{}",
+                    n
+                )));
             }
         }
     };

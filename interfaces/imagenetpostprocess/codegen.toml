@@ -5,19 +5,8 @@ path = "."
 files = [ "imagenet.smithy" ]
 
 [[models]]
-path = "../../../../interfaces/ml"
+url = "https://cdn.jsdelivr.net/gh/wasmcloud/interfaces@9d89d2fb5c337d97c08f6fc3df413545632f3b03/ml"
 files = [ "mlinference.smithy" ]
-
-# Additional namespaces may be added to this library crate by adding
-# a rust source file below for each namespace,
-# and importing each of them into src/lib.rs
-[[rust.files]]
-path = "src/imagenet.rs"
-namespace = "org.wasmcloud.interface.mlimagenet"
-
-[[rust.files]]
-path = "../../../../interfaces/ml/rust/source/mlinference.rs"
-namespace = "org.wasmcloud.interface.mlinference"
 
 [[models]]
 # wasmbus-core
@@ -64,4 +53,11 @@ output_dir = "rust"
 # create_only - whether file should be generated only with --create (default false)
 # namespace - limit generated shapes to shapes in this namespace
 # * - any other fields are per-file parameters passed to codegen and renderer
+
+# Additional namespaces may be added to this library crate by adding
+# a rust source file below for each namespace,
+# and importing each of them into src/lib.rs
+[[rust.files]]
+path = "src/imagenet.rs"
+namespace = "org.wasmcloud.interface.mlimagenet"
 

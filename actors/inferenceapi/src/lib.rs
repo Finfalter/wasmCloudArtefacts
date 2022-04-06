@@ -43,10 +43,10 @@ impl HttpServer for InferenceapiActor {
                 })?;
 
                 // validate
-                validate(model_name, &tensor).await.map_err(|error| error).ok();
+                validate(model_name, &tensor).await?;
                     
+                // predict
                 let prediction:InferenceOutput = predict(ctx, model_name, tensor).await?;
-                //let prediction = get_prediction(ctx, model_name, "0", tensor).await?;
 
                 if let Status::Error(error) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -60,20 +60,16 @@ impl HttpServer for InferenceapiActor {
             ("POST", [model_name, "preprocess"]) => {
                 debug!("receiving POST(model, preprocess) ..");
                 
+                // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
                     .convert(ctx, &ConversionRequest { data: req.body.to_owned() })
                     .await?;                
 
-                let tensor = preprocessed.tensor;
+                // validate
+                validate(model_name, &preprocessed.tensor).await?;
 
-                // // validate
-                // validate(model_name, tensor).await
-                // .map_err(|error| Ok(HttpResponse::internal_server_error(
-                //     format!("Invalid input arguments: {}", error))
-                // ));
-
-                //let prediction = get_prediction(ctx, model_name, "0", tensor).await?;
-                let prediction:InferenceOutput = predict(ctx, model_name, tensor).await?;
+                // predict
+                let prediction:InferenceOutput = predict(ctx, model_name, preprocessed.tensor).await?;
 
                 if let Status::Error(e) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -88,20 +84,16 @@ impl HttpServer for InferenceapiActor {
             ("POST", [model_name, "matches"]) => {
                 debug!("receiving POST(model, classes) ..");
                 
+                // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(PREPROCESS_ACTOR)
                     .convert(ctx, &ConversionRequest { data: req.body.to_owned() })
                     .await?;
-                
-                let tensor = preprocessed.tensor;
 
-                // // validate
-                // validate(model_name, tensor).await
-                // .map_err(|error| Ok(HttpResponse::internal_server_error(
-                //     format!("Invalid input arguments: {}", error))
-                // ));
+                // validate
+                validate(model_name, &preprocessed.tensor).await?;
 
-                //let prediction = get_prediction(ctx, model_name, "0", tensor).await?;
-                let prediction:InferenceOutput = predict(ctx, model_name, tensor).await?;
+                // predict
+                let prediction:InferenceOutput = predict(ctx, model_name, preprocessed.tensor).await?;
 
                 // postprocess
                 let postprocessed = ImagenetSender::to_actor(POSTPROCESS_ACTOR)
@@ -129,19 +121,20 @@ impl HttpServer for InferenceapiActor {
 async fn validate(
     model_name: &str,
     tensor: &Tensor,
-) -> Result<(), HttpResponse> {
+) -> Result<(), RpcError> {
 
     if model_name.is_empty()  {
-        return Err(HttpResponse::internal_server_error("The name of a model MUST be provided!".to_string()));
+        return Err(RpcError::InvalidParameter("The name of a model MUST be provided!".to_string()));
     }
 
     if tensor.data.is_empty()  {
-        return Err(HttpResponse::internal_server_error("The input tensor MUST NOT be empty!".to_string()));
+        return Err(RpcError::InvalidParameter("The input tensor MUST NOT be empty!".to_string()));
     }
 
     if tensor.dimensions.is_empty()  {
-        return Err(HttpResponse::internal_server_error("Tensor dimensions MUST be provided!".to_string()));
+        return Err(RpcError::InvalidParameter("Tensor dimensions MUST be provided!".to_string()));
     }
+
     Ok(())
 }
 
@@ -162,39 +155,6 @@ async fn predict(
     let mls = MlInferenceSender::new();
     mls.predict(ctx, &input).await
 }
-
-// async fn get_prediction(
-//     ctx: &Context,
-//     model_name: &str,
-//     index: &str,
-//     tensor: Tensor,
-// ) -> RpcResult<HttpResponse> {
-//     debug!("Deserialized input tensor: {:?}", tensor);
-
-//     if model_name.is_empty() || tensor.data.is_empty() || tensor.dimensions.is_empty() {
-//         return Ok(HttpResponse::internal_server_error(
-//             "Invalid input arguments",
-//         ));
-//     }
-
-//     let input = InferenceInput {
-//         model: model_name.to_string(),
-//         index: index.parse().unwrap_or(0),
-//         tensor: tensor,
-//     };
-
-//     let mls = MlInferenceSender::new();
-//     let prediction = mls.predict(ctx, &input).await?;
-
-//     if let Status::Error(e) = prediction.result {
-//         Ok(HttpResponse::internal_server_error(format!(
-//             "compute_output: {:?}",
-//             e
-//         )))
-//     } else {
-//         HttpResponse::json(prediction, 200)
-//     }
-// }
 
 fn deser<'de, T: Deserialize<'de>>(raw: &'de [u8]) -> RpcResult<T> {
     serde_json::from_slice(raw).map_err(|e| RpcError::Deser(format!("{}", e)))

@@ -88,12 +88,13 @@ Once the application is up and running, start to issue requests. Currently, the 
 
 ## Examples
 
-Apart from the underlying inference engine, e.g. ONNX vs. Tensorflow, the pre-configured models differ in a further aspect: concerning the *trivial* models, one may request processing upon arbitrary shapes of one-dimensional data, `[1, n]`. [Mobilenet](https://github.com/onnx/models/tree/main/vision/classification/mobilenet) and [Squeezenet](https://github.com/onnx/models/tree/main/vision/classification/squeezenet), however, have more requirements regarding their respective input tensor. To fulfill these, the respective input tensor of an arbitrary image may be preprocessed before being routed to the inference engine.
+Apart from the underlying inference engine, e.g. ONNX vs. Tensorflow, the pre-configured models differ in a further aspect: concerning the *trivial* models, one may request processing upon arbitrary shapes of one-dimensional data, `[1, n]`. [Mobilenet](https://github.com/onnx/models/tree/main/vision/classification/mobilenet) and [Squeezenet](https://github.com/onnx/models/tree/main/vision/classification/squeezenet), however, have more requirements regarding their respective input tensor. To fulfill these, the respective input tensor of an arbitrary image can be preprocessed before being routed to the inference engine.
 
-The application provides two endpoints. The first endpoint routes the input tensor to the related inference engine without any preprocessing. The second endpoint preprocesses the input tensor and routes it to the related inference engine thereafter:
+The application provides three endpoints. The first endpoint routes the input tensor to the related inference engine without any pre-processing. The second endpoint __pre-processes__ the input tensor and routes it to the related inference engine thereafter. The third performs a pre-processing before the prediction step and a __post-processinging__ afterwards.
 
 1. `0.0.0.0:<port>/<model>`, e.g. `0.0.0.0:7078/identity`
 2. `0.0.0.0:<port>/<model>/preprocess`, e.g. `0.0.0.0:7078/squeezenetv117/preprocess`
+3. `0.0.0.0:<port>/<model>/matches`, e.g. `0.0.0.0:7078/squeezenetv117/matches`
 
 ### Identity Model
 
@@ -135,7 +136,12 @@ Note that in contrast to the __*identity*__ model, the answer from __*plus3*__ i
 curl -v POST 0.0.0.0:8078/mobilenetv27/preprocess --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
 ```
 
-Note that the output tensor is of shape `[1,1000]` and needs to be post-processed where the post-processing is currently not part of the application.
+Note that the output tensor is of shape `[1,1000]` and needs to be post-processed by an evaluation of the [softmax](https://en.wikipedia.org/wiki/Softmax_function) over the outputs. In case the softmax shall be evaluated as well use the third endpoint, for example like the following:
+
+```bash
+# in order for the relative path to match call from directory 'deploy'
+curl -v POST 0.0.0.0:8078/mobilenetv27/matches --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
+```
 
 ### Squeezenet model
 
@@ -144,7 +150,18 @@ Note that the output tensor is of shape `[1,1000]` and needs to be post-processe
 curl -v POST 0.0.0.0:8078/squeezenetv117/preprocess --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
 ```
 
-Note that the output tensor is of shape `[1,1000]` and needs to be post-processed where the post-processing is currently not part of the application.
+Note that the output tensor is of shape `[1,1000]` and needs to be post-processed where the post-processing is currently not part of the application. Or, including pos-processing as follows:
+
+```bash
+# in order for the relative path to match call from directory 'deploy'
+curl -v POST 0.0.0.0:8078/squeezenetv117/matches --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
+```
+
+The answer should comprise
+
+```bash
+[{"label":"n02883205 bow tie, bow-tie, bowtie","probability":0.16806115},{"label":"n04350905 suit, suit of clothes","probability":0.14194612},{"label":"n03763968 military uniform","probability":0.11412828},{"label":"n02669723 academic gown, academic robe, judge's robe","probability":0.09906072},{"label":"n03787032 mortarboard","probability":0.09620707}]
+```
 
 ## Creation of new bindles
 

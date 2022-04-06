@@ -1,5 +1,4 @@
 use wasmbus_rpc::actor::prelude::*;
-//use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_mlinference::{InferenceOutput, Status};
 use wasmcloud_interface_mlimagenet::{Imagenet, ImagenetReceiver, Classification, Matches};
 
@@ -13,7 +12,6 @@ mod classes;
 #[services(Actor, Imagenet)]
 struct ImagenetpostprocessorActor {}
 
-/// Implementation of HttpServer trait methods
 #[async_trait]
 impl Imagenet for ImagenetpostprocessorActor {
 
@@ -43,27 +41,18 @@ impl Imagenet for ImagenetpostprocessorActor {
 
         let labels: Vec<String> = classes::IMAGENT_CLASSES.lines().map(String::from).collect();
 
-        //let mut actual: Vec<String> = Vec::new();
         let mut matches: Vec<Classification> = Vec::new();
         
         for i in 0..5 {
-            //let c = labels[probabilities[i].0].clone();
             let clfn  = Classification { 
                 label: labels[probabilities[i].0].clone(),
                 probability: probabilities[i].1,
             };
-            //actual.push(c);
             
             matches.push(clfn);
-            
-            // println!(
-            //     "class={} ({}); probability={}",
-            //     labels[probabilities[i].0], probabilities[i].0, probabilities[i].1
-            // );
         };
 
         Ok(matches)
-
     }
 }
 

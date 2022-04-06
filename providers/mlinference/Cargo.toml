@@ -22,7 +22,7 @@ tract-linalg = "0.16.1"
 tract-onnx = { version = "0.16.1" }
 tract-tensorflow = "0.16.1"
 wasmbus-rpc = "0.8.4"
-wasmcloud_interface_mlinference = { path="../../../../interfaces/ml/rust" }
+wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
 
 # test dependencies
 [dev-dependencies]

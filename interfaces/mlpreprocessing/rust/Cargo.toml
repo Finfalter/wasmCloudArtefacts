@@ -17,7 +17,7 @@ async-trait = "0.1"
 serde = { version = "1.0" , features = ["derive"] }
 serde_bytes = "0.11"
 wasmbus-rpc = "0.8.3"
-wasmcloud_interface_mlinference = { path="../../../../../interfaces/ml/rust" }
+wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
 
 [dev-dependencies]
 base64 = "0.13"

@@ -30,6 +30,13 @@ _SHOW_HELP
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
 source $_DIR/env
 
+# allow extra time to process RPC
+export WASMCLOUD_RPC_TIMEOUT_MS=8000
+# enable verbose logging
+export WASMCLOUD_STRUCTURED_LOGGING_ENABLED=1
+export WASMCLOUD_STRUCTURED_LOG_LEVEL=debug
+export RUST_LOG=debug
+
 ##
 #   BINDLE
 ## 
@@ -49,17 +56,18 @@ BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 #   CAPABILITY PROVIDERS
 ##
 
-HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.14.5
+# oci registry - as used by wash
+REG_SERVER=127.0.0.1:5000
+# registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
+REG_SERVER_FROM_HOST=127.0.0.1:5000
+
+HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
 HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
 
-MLINFERENCE_REF=127.0.0.1:5000/mlinference:0.1.0
-MLINFERENCE_ID=VDIRCLM2EUPU7JASBU7CWAXHBXCSYR7VAD2UZ5MZJUA47KPMQDOPTCB5
-
-# the registry using container name
-REG_SERVER=registry:5000
+MLINFERENCE_REF=${REG_SERVER}/mlinference:0.1.0
 
 # actor to link to httpsrever. 
-INFERENCEAPI_ACTOR=../actors/inferenceapi
+INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
 
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
@@ -97,16 +105,18 @@ __WIPE
 
     docker-compose --env-file $SECRETS stop
     docker-compose --env-file $SECRETS rm -f
-    wash drain all
 
     rm -f $ALL_SECRET_FILES
 
     echo -n "going to stop wasmCloud host .."
+    host_cmd stop || true
 
-    host_cmd stop
+    ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
+    ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
+    killall --quiet -KILL wasmcloud_httpserver_default || true
+    killall --quiet -KILL wasmcloud_mlinference_default || true
 
-    ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs kill
-    ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs kill
+    wash drain all
 
     # clear bindle cache
     rm -rf ~/.cache/bindle ~/Library/Caches/bindle
@@ -177,9 +187,9 @@ host_id() {
 push_capability_provider() {
     echo "\npushing capability provider 'mlinference:0.1.0' to your local registry .."
     
-    export WASMCLOUD_OCI_ALLOWED_INSECURE=127.0.0.1:5000
+    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
-    wash reg push $MLINFERENCE_REF ../providers/mlinference/build/mlinference.par.gz --insecure
+    wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
 }
 
 # start docker services
@@ -200,7 +210,21 @@ start_services() {
     echo "starting wasmCloud host .."
 
     # start wasmCloud host in background
+    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
     host_cmd start
+}
+
+start_actors() {
+
+    echo "starting actors .."
+    _here=$PWD
+    cd ${_DIR}/../actors
+    for i in */; do
+        if [ -f $i/Makefile ]; then
+            make -C $i build push start
+        fi
+    done
+    cd $_here
 }
 
 # start wasmcloud capability providers
@@ -211,6 +235,10 @@ start_providers() {
     echo "starting capability provider 'mlinference:0.1.0' to your local registry .."
 
     wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+
+    # make sure inference provider is built
+    make -C ${_DIR}/../providers/mlinference all
+
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
 }
 
@@ -230,6 +258,9 @@ link_providers() {
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
     wash ctl link put $_actor_id $HTTPSERVER_ID     \
         wasmcloud:httpserver config_b64=$(b64_encode_file $HTTP_CONFIG )
+
+    # use locally-generated id, since mlinference provider isn't published yet
+    MLINFERENCE_ID=$(wash par inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
 
     # link inferenceapi actor to mlinference provider
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
@@ -258,7 +289,7 @@ check_files() {
 run_all() {
 
     # make sure we have all prerequisites installed
-    ./checkup.sh
+    ${_DIR}/checkup.sh
 
     if [ ! -f $SECRETS ]; then
         create_secrets
@@ -268,23 +299,24 @@ run_all() {
     # start all the containers
     start_services
 
+    # start host console to view logs
+    if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
+        $TERMINAL -e ./run.sh host attach &
+    fi
+
     # push capability provider to local registry
     push_capability_provider
 
-    # build all actors
-    make
-
-    # push actors to registry
-    make push
-
-	# start actors
-	make start REG_SERVER=127.0.0.1:5000
+    # build, push, and start all actors
+    start_actors
 
     # start capability providers: httpserver and sqldb 
     start_providers
 
     # link providers with actors
     link_providers
+
+    show_inventory
 }
 
 case $1 in 
@@ -296,10 +328,11 @@ case $1 in
     bindle-start | start-bindle ) start_bindle ;;
     bindle-stop | stop-bindle ) stop_bindle ;;
     bindle-create | create-bindle ) create_bindle ;;
+    start-actors ) start_actors ;;
     start-providers ) start_providers ;;
     link-providers ) link_providers ;;
     host ) shift; host_cmd $@ ;;
-    run-all | all ) run_all ;;
+    run-all | all ) shift; run_all $@ ;;
 
     * ) show_help && exit 1 ;;
 

@@ -1,8 +1,9 @@
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_logging::debug;
 use wasmcloud_interface_mlpreprocessing::{
-    MlPreprocessing, MlPreprocessingReceiver, Status,
-    ConversionOutput, ConversionRequest, Tensor, ValueType};
+    ConversionOutput, ConversionRequest, MlPreprocessing, MlPreprocessingReceiver, Status, Tensor,
+    ValueType,
+};
 
 mod img;
 
@@ -13,10 +14,11 @@ struct ImagepreprocessorActor {}
 /// Implementation of MlPreprocessing trait methods
 #[async_trait]
 impl MlPreprocessing for ImagepreprocessorActor {
-
-    async fn convert(&self, _ctx: &Context, arg: &ConversionRequest) 
-    -> RpcResult<ConversionOutput>
-    {
+    async fn convert(
+        &self,
+        _ctx: &Context,
+        arg: &ConversionRequest,
+    ) -> RpcResult<ConversionOutput> {
         let image: Vec<u8> = arg.data.to_owned();
 
         // TODO: validate the image, does it have 3 channels? Is it RGB?
@@ -28,18 +30,17 @@ impl MlPreprocessing for ImagepreprocessorActor {
         debug!("convert() - AFTER conversion");
 
         let t = Tensor {
-            value_types: vec![ ValueType::ValueF32 ],
+            value_types: vec![ValueType::ValueF32],
             dimensions: vec![1, 3, 224, 224],
             data: convert,
             flags: 0,
         };
-        
+
         let convert = ConversionOutput {
             result: Status::Success,
-            tensor: t
+            tensor: t,
         };
 
         Ok(convert)
     }
 }
-

@@ -1,10 +1,10 @@
 use wasmbus_rpc::actor::prelude::*;
+use wasmcloud_interface_mlimagenet::{Classification, Imagenet, ImagenetReceiver, Matches};
 use wasmcloud_interface_mlinference::{InferenceOutput, Status};
-use wasmcloud_interface_mlimagenet::{Imagenet, ImagenetReceiver, Classification, Matches};
 
-use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use ndarray::{Array, ArrayBase};
+use std::io::Cursor;
 
 mod classes;
 
@@ -14,17 +14,14 @@ struct ImagenetpostprocessorActor {}
 
 #[async_trait]
 impl Imagenet for ImagenetpostprocessorActor {
-
-    async fn postprocess(&self, _ctx: &Context, arg: &InferenceOutput) 
-    -> RpcResult<Matches> {
+    async fn postprocess(&self, _ctx: &Context, arg: &InferenceOutput) -> RpcResult<Matches> {
         let tensor = arg.tensor.to_owned();
 
         if let Status::Error(error) = &arg.result {
-            return Err(
-                RpcError::InvalidParameter(
-                    format!("Invalid input at imagenet postprocessing, due to {:?}", error)
-                )
-            );
+            return Err(RpcError::InvalidParameter(format!(
+                "Invalid input at imagenet postprocessing, due to {:?}",
+                error
+            )));
         };
 
         let raw_result_f32 = bytes_to_f32_vec(tensor.data).unwrap();
@@ -36,21 +33,21 @@ impl Imagenet for ImagenetpostprocessorActor {
             .into_iter()
             .enumerate()
             .collect::<Vec<_>>();
-        
+
         probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let labels: Vec<String> = classes::IMAGENT_CLASSES.lines().map(String::from).collect();
 
         let mut matches: Vec<Classification> = Vec::new();
-        
+
         for i in 0..5 {
-            let clfn  = Classification { 
+            let clfn = Classification {
                 label: labels[probabilities[i].0].clone(),
                 probability: probabilities[i].1,
             };
-            
+
             matches.push(clfn);
-        };
+        }
 
         Ok(matches)
     }
@@ -94,4 +91,3 @@ where
         new_array
     }
 }
-

@@ -1,12 +1,12 @@
-use image::Pixel;
 use anyhow::Error;
+use image::Pixel;
+use ndarray::{array, s, Array, ArrayBase};
 use std::{
     fmt::Debug,
-    io::{BufRead, BufReader},    
+    io::{BufRead, BufReader},
 };
 use wasmbus_rpc::provider::prelude::*;
 use wasmcloud_interface_mlinference::*;
-use ndarray::{s, array, Array, ArrayBase};
 use wasmcloud_test_util::{
     check,
     cli::print_test_results,
@@ -16,7 +16,7 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
-use wasmcloud_provider_mlinference::inference::{f32_vec_to_bytes, bytes_to_f32_vec};
+use wasmcloud_provider_mlinference::inference::{bytes_to_f32_vec, f32_vec_to_bytes};
 
 pub trait NdArrayTensor<S, T, D> {
     /// https://en.wikipedia.org/wiki/Softmax_function
@@ -99,9 +99,10 @@ const LABELS_PATH: &str = "tests/testdata/models/squeezenet_labels.txt";
 #[tokio::test]
 async fn run_all() {
     let opts = TestOptions::default();
-    
-    let res = run_selected_spawn!(&opts, 
-        health_check, 
+
+    let res = run_selected_spawn!(
+        opts,
+        health_check,
         onnx_identity_input_output,
         tensorflow_plus3,
         onnx_mobilenetv2_7,
@@ -146,7 +147,7 @@ async fn onnx_identity_input_output(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
-        value_types: vec![ ValueType::ValueF32 ],
+        value_types: vec![ValueType::ValueF32],
         dimensions: tensor_shape,
         data: tensor_data,
         flags: 0,
@@ -160,7 +161,10 @@ async fn onnx_identity_input_output(_opt: &TestOptions) -> RpcResult<()> {
 
     let predict_result = env.0.predict(&env.1, &ir).await?;
 
-    println!("onnx_identity_input_output() with result {:?}", predict_result);
+    println!(
+        "onnx_identity_input_output() with result {:?}",
+        predict_result
+    );
 
     assert_eq!(
         tensor_data_cloned, predict_result.tensor.data,
@@ -181,7 +185,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
     let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
 
     // expected result after being processed by model 'plus 3'
-    let output_tensor= array![[4.0, 5.0, 6.0, 7.0]];
+    let output_tensor = array![[4.0, 5.0, 6.0, 7.0]];
 
     println!("input_tensor: {:#?}", input_tensor);
 
@@ -194,7 +198,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape_cloned = tensor_shape.clone();
 
     let t = Tensor {
-        value_types: vec![ ValueType::ValueF32 ],
+        value_types: vec![ValueType::ValueF32],
         dimensions: tensor_shape,
         data: tensor_data,
         flags: 0,
@@ -211,7 +215,8 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
     println!("tensorflow_plus3() with result {:?}", predict_result);
 
     assert_eq!(
-        predict_result.tensor.data, f32_vec_to_bytes(output_tensor.as_slice().unwrap().to_vec()),
+        predict_result.tensor.data,
+        f32_vec_to_bytes(output_tensor.as_slice().unwrap().to_vec()),
         "Output data should be input 'plus 3'"
     );
     assert_eq!(
@@ -231,7 +236,7 @@ async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("input_tensor: {:#?}", input_tensor);
 
     let t = Tensor {
-        value_types: vec![ ValueType::ValueF32 ],
+        value_types: vec![ValueType::ValueF32],
         dimensions: vec![1, 3, 224, 224],
         data: image,
         flags: 0,
@@ -262,9 +267,9 @@ async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
 
     let mut actual: Vec<String> = Vec::new();
     let labels: Vec<String> = labels.lines().map(|line| line.unwrap()).collect();
-    
+
     println!("results for image {:#?}", IMG_PATH);
-    
+
     for i in 0..5 {
         let c = labels[probabilities[i].0].clone();
         actual.push(c);
@@ -297,7 +302,7 @@ async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("input_tensor: {:#?}", input_tensor);
 
     let t = Tensor {
-        value_types: vec![ ValueType::ValueF32 ],
+        value_types: vec![ValueType::ValueF32],
         dimensions: vec![1, 3, 224, 224],
         data: image,
         flags: 0,
@@ -322,16 +327,16 @@ async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
         .into_iter()
         .enumerate()
         .collect::<Vec<_>>();
-        
+
     probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let labels = BufReader::new(std::fs::File::open(LABELS_PATH).unwrap());
 
     let mut actual: Vec<String> = Vec::new();
     let labels: Vec<String> = labels.lines().map(|line| line.unwrap()).collect();
-    
+
     println!("results for image {:#?}", IMG_PATH);
-    
+
     for i in 0..5 {
         let c = labels[probabilities[i].0].clone();
         actual.push(c);

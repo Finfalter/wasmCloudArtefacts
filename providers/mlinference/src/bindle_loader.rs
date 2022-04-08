@@ -105,8 +105,8 @@ impl BindleLoader {
         );
 
         // storing metadata makes sense when model data is done
-        let metadata: ModelMetadata = ModelMetadata::from_json(&metadata_blob)
-            .map_err(|error| {
+        let metadata: ModelMetadata =
+            ModelMetadata::from_json(&metadata_blob).map_err(|error| {
                 log::error!("BindleParsingMetadataError: '{}'", error);
                 BindleError::BindleParsingMetadataError(format!("{}", error))
             })?;

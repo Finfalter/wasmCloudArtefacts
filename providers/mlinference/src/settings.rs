@@ -1,7 +1,6 @@
 //use hashmap_ci::{make_case_insensitive};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use wasmbus_rpc::error::RpcError;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -39,7 +38,7 @@ pub struct Models {
 }
 
 impl Models {
-    fn is_empty(&mut self) -> bool {
+    fn is_empty(&self) -> bool {
         self.zoo.is_empty()
     }
 }
@@ -49,10 +48,13 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
 
     // Allow keys to be UPPERCASE, as an accommodation
     // for the lost souls who prefer ugly all-caps variable names.
-    let values = crate::make_case_insensitive(values).ok_or_else(|| RpcError::InvalidParameter(
-        "Key collision: httpserver settings (from linkdef.values) has one or more keys that are not unique based on case-insensitivity"
-            .to_string(),
-    ))?;
+    let values = crate::make_case_insensitive(values).ok_or_else(|| {
+        RpcError::InvalidParameter(
+            "Key collision: httpserver settings (from linkdef.values) has one or more keys that \
+             are not unique based on case-insensitivity"
+                .to_string(),
+        )
+    })?;
 
     let mut settings = ModelSettings::default();
 

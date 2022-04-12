@@ -1,83 +1,109 @@
 # MlInference
 
-This repository provides a [wasmCloud](https://wasmcloud.dev/) capability provider and corresponding interface being designed to do __inference__ based on a given AI model.
+This repository provides a [wasmCloud](https://wasmcloud.dev/) 
+capability provider and actors to perform __inference__ 
+using machine learning models for ONNX and Tensorflow.
 
 ## Prerequisites
 
 ### Bindle
 
-For development and/or in case you want to avoid security issues, use [bindle v0.7.1](https://github.com/deislabs/bindle/tags). Use the latest version otherwise.
+We recommand using [bindle version v0.7.1](https://github.com/deislabs/bindle/tags)
+The latest version in github HEAD (as of March 2022) has not been released,
+and includes signature checks, and are not compatible with the scripts
+and models in this repo.
+
 
 ### Docker Compose
 
-Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2). See also [Install wasmCloud with Docker](https://wasmcloud.dev/overview/installation/install-with-docker/).
+Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2).
 
-## Build
 
-From the top-level **directory** build with `make`.
+### Wasmcloud host
 
----
-**NOTE**
+Download a wasmcloud host binary release for your platform from
+[Releases](https://github.com/wasmCloud/wasmcloud-otp/releases) 
+and unpack it. The path to the download folder should be set as
+`WASMCLOUD_HOST_HOME` in `deploy/env` 
 
-As of __2022-03-24__, the application will not compile unless you additionally have a local copy of [wasmCloud/interfaces](https://github.com/wasmCloud/interfaces) checked out with branch __*feat/mlinference*__  __and__ the path of __*wasmcloud_interface_mlinference*__ matches its `/interfaces/ml/rust` in __Cargo.toml__. Expect that to be corrected soon!
 
----
+## Build actors and providers
 
-## Deployment
+From the top-level **directory** build with `make`. This should complete
+without errors.
 
-General build artifacts are located in `/deploy`. Bindle specific build artifacts are located in `/bindle/models`. The script `/deploy/run.sh` drives the application. The application comprises a startup and shutdown of the following entities:
 
-* nats
-* registry
-* bindle-server
-* wasmCloud host
+### Prepare models
 
-Type `./deploy/run.sh` for more information.
+Models (in `bindle/models`) must be loaded into the bindle server.
 
-The script tries to launch __nats__ and __registry__ via `docker compose`. Following a recommendation from wasmCloud core-team the wasmCloud host is *not* started in a container. 
+If you are using your own model, you will need to create a "bindle
+invoice", a `.toml` file listing the bindle artifacts. Each artifact
+has a sha256 hash and file size of each artifact. See the
+existing toml files in `bindle/models` for examples.
+
 
 ### Configuration
 
-Start with a modification of paths in file `deploy/env`. This file is the only one which is necessary to modify in order to get a basic example up and running.
+Update paths in file `deploy/env` to match your development environment.
 
-While starting up, the capability provider which comprises the inference engine tries to download artifacts from a bindle-server. You have to upload these artifacts first in order to make them downloadable by the capability provider. The following command uploads a pre-configured bindle. You have to call it only once.
+Be sure to set BINDLE and BINDLE_SERVER in `env` to the paths to the bindle cli
+and bindle server executables, respectively. If they are in your $PATH,
+you can just set these to `bindle` and `bindle-server`. If you built
+bindle from git, use the 0.7.1 tag, run `cargo build`, and set
+BINDLE_HOME to the path to the git repo. 
 
-```bash
-./deploy/run.sh create-bindle
+
+## Running
+
+The script `deploy/run.sh` contains commands to run everything. In the
+`deploy` folder, run `run.sh` to see a list of available subcommands.
+
+Start the bindle server and load the models.
+
+```
+./run.sh bindle-start
+./run.sh bindle-create
 ```
 
-The definition of the bindle, `invoice_w_groups.toml`, and its two parcels, `identity_input_output.json` and `identity_input_output.onnx` are located in `/bindle/models`.
+Start the local registry server, nats server, wasmcloud host,
+actors, and providers. If this is your first time running running this
+app, add `--console` to the end of the following command to open a new
+terminal window with the host logs. The logs may be useful for
+diagnosing any problems.
 
-### Launch
-
-Except the bindle-server, all entities are considered and started by using option `all`. Start the bindle-server first, then the other entities. To display all subcommands run `run.sh` without arguments.
-
-```bash
-cd deploy
-
-# display all available subcommands
-./run.sh
-
-# start bindle-server
-./run.sh bindle-start
-
-# launch the application
+```
 ./run.sh all
-
-# execute next line to stop the application (except bindle server)
-# ./run.sh wipe
-
-# execute next line to stop bindle server
-# ./run.sh bindle-stop
+# or, to open a $TERMINAL window with host logs
+./run.sh all --console
 ```
 
 After a successful startup the *washboard* should look similar to the following screenshot:
 
 <div style="width: 80%; height: 50%">
-
 ![washboard after successful launch](images/washboard.png "washboard after successful launch")
-
 </div>
+
+
+If everything started correctly, try sending an image to be classified:
+(try any of the images in `images/`, or try one of your own!
+
+```
+curl -T images/cat.jpg http://localhost:8078/mobilenetv27/matches | jq
+```
+
+
+To stop the host and providers,
+```
+/run.sh wipe
+```
+The above command stops everything except the bindle server.
+
+
+To stop the bindle server,
+```
+./run.sh bindle-stop
+```
 
 Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
 

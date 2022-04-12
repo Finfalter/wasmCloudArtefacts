@@ -42,12 +42,9 @@ impl Default for ExecutionTarget {
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-    async fn load(
+    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph>;
+    async fn init_execution_context(
         &self,
-        builder: &[u8],
-        target: &ExecutionTarget,
-    ) -> InferenceResult<Graph>;
-    async fn init_execution_context(&self, 
         graph: Graph,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext>;

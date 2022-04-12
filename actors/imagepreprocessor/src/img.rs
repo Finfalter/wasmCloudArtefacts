@@ -1,6 +1,6 @@
+use image::{load_from_memory, Pixel};
+use ndarray::s;
 use wasmbus_rpc::actor::prelude::*;
-use image::{Pixel, load_from_memory};
-use ndarray::{s};
 use wasmcloud_interface_logging::debug;
 
 pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
@@ -50,16 +50,10 @@ pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
 //     }
 // }
 
-pub async fn preprocess(
-    raw_data: &[u8],
-    height: u32,
-    width: u32,
-) -> RpcResult<Vec<u8>> {
-
+pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
     log::debug!("preprocess() - HERE");
 
-    let raw_image = load_from_memory(raw_data)
-        .map_err(|e| RpcError::Deser(e.to_string()))?;
+    let raw_image = load_from_memory(raw_data).map_err(|e| RpcError::Deser(e.to_string()))?;
 
     let image = image::imageops::resize(
         &raw_image,

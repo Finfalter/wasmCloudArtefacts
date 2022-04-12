@@ -6,7 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
-    InferenceOutput, InferenceInput, MlError, MlInference, MlInferenceReceiver
+    InferenceInput, InferenceOutput, MlError, MlInference, MlInferenceReceiver,
 };
 use wasmcloud_provider_mlinference::{
     get_default_inference_result, load_settings, BindleLoader, Graph, GraphExecutionContext,
@@ -122,19 +122,14 @@ impl MlInferenceProvider {
 
             let (metadata, model_data_bytes) = downloads;
 
-            context
-                .load_metadata(metadata)
-                .map_err(|error| {
-                    log::error!("load_metadata() failed!");
-                    RpcError::InvalidParameter(format!("{:?}", error))
-                })?;
+            context.load_metadata(metadata).map_err(|error| {
+                log::error!("load_metadata() failed!");
+                RpcError::InvalidParameter(format!("{:?}", error))
+            })?;
 
             let graph: Graph = self
                 .engine
-                .load(
-                    &model_data_bytes,
-                    &context.execution_target,
-                )
+                .load(&model_data_bytes, &context.execution_target)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
@@ -178,16 +173,12 @@ impl MlInference for MlInferenceProvider {
         let index = arg.index;
 
         let ar = self.actors.read().await;
-
         let modelzoo: &ModelZoo = match ar.get(&actor) {
             Some(v) => v,
             None => {
-                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError("".into())));
-                log::error!(
-                    "predict() - returning early because no corresponding actor was found!"
-                );
-                log::error!("predict() - actor supposed to be found '{}'", &actor);
-                log::error!("predict() - available content in modelzoo: '{:?}'", &ar);
+                let ir =
+                    get_default_inference_result(Some(MlError::ContextNotFoundError("".into())));
+                log::error!("predict() - actor {} not found, modelzoo={:?}", &actor, &ar);
                 return Ok(ir);
             }
         };
@@ -195,7 +186,9 @@ impl MlInference for MlInferenceProvider {
         let model_context: ModelContext = match modelzoo.get(model_name) {
             Some(m) => m.clone(),
             None => {
-                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(model_name.clone())));
+                let ir = get_default_inference_result(Some(MlError::ContextNotFoundError(
+                    model_name.clone(),
+                )));
                 log::error!("predict() - returning early because no corresponding model found!");
                 return Ok(ir);
             }
@@ -216,11 +209,15 @@ impl MlInference for MlInferenceProvider {
                     "predict() - inference engine failed in 'set_input()' with '{}'",
                     e
                 );
-                return get_default_inference_result(Some(MlError::ContextNotFoundError(e.to_string())));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(
+                    e.to_string(),
+                )));
             }
             if let Err(e) = engine.compute(model_context.graph_execution_context).await {
                 log::error!("predict() - GraphExecutionContext not found: {}", e);
-                return get_default_inference_result(Some(MlError::ContextNotFoundError(e.to_string())));
+                return get_default_inference_result(Some(MlError::ContextNotFoundError(
+                    e.to_string(),
+                )));
             }
             match engine
                 .get_output(model_context.graph_execution_context, index)

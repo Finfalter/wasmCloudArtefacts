@@ -47,8 +47,8 @@ impl ModelContext {
     /// load metadata
     pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, MlError> {
         self.graph_encoding = metadata.graph_encoding;
-        self.value_type = ValueType::try_from(metadata.tensor_type.as_str())
-            .map_err(|e| MlError::InvalidModel(e))?;
+        self.value_type =
+            ValueType::try_from(metadata.tensor_type.as_str()).map_err(MlError::InvalidModel)?;
         self.execution_target = metadata.execution_target;
 
         Ok(self)

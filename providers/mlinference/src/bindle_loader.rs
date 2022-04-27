@@ -52,10 +52,16 @@ impl BindleLoader {
     /// provide
     pub async fn provide(bindle_url: &str) -> BindleResult<Client<NoToken>> {
         // init the connection to bindle
-        let url = std::env::var(bindle_url).map_err(|_| BindleError::NoBindleUrlDefinedError)?;
+        let url = std::env::var(bindle_url).map_err(|_| {
+            log::error!("No Bindle Url defined!");
+            BindleError::NoBindleUrlDefinedError
+        })?;
 
         let bindle_client =
-            Client::new(&url, NoToken).map_err(|_| BindleError::BindleUrlInvalidError)?;
+            Client::new(&url, NoToken).map_err(|_| {
+                log::error!("Bindle Url invalid!");
+                BindleError::BindleUrlInvalidError
+            })?;
 
         Ok(bindle_client)
     }
@@ -68,22 +74,35 @@ impl BindleLoader {
         let invoice = bindle_client
             .get_invoice(bindle_url)
             .await
-            .map_err(|_| BindleError::BindleInvoiceNotFoundError(bindle_url.to_string()))?;
+            .map_err(|_| {
+                log::error!("Bindle Invoice not found!");
+                BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
+            })?;
 
         let parcels = invoice
             .parcel
-            .ok_or_else(|| BindleError::BindleParcelNotFoundError(bindle_url.to_string()))?;
+            .ok_or_else(|| {
+                log::error!("Bindle Parcel not found!");
+                BindleError::BindleParcelNotFoundError(bindle_url.to_string())
+            })?;
 
         let model_parcel = BindleLoader::get_first_member_of(&parcels, "model")
-            .map_err(|_| BindleError::BindleNoParcelOfGroupModelError)?;
+            .map_err(|_| {
+                log::error!("No Bindle Parcel of group 'model'!");
+                BindleError::BindleNoParcelOfGroupModelError
+            })?;
 
         let metadata_parcel = BindleLoader::get_first_member_of(&parcels, "metadata")
-            .map_err(|_| BindleError::BindleNoParcelOfGroupMetadataError)?;
+            .map_err(|_| {
+                log::error!("No Bindle Parcel of group 'metadata'!");
+                BindleError::BindleNoParcelOfGroupMetadataError
+            })?;
 
         let model_data_blob: Vec<u8> = bindle_client
             .get_parcel(bindle_url, &model_parcel.label.sha256)
             .await
             .map_err(|_| {
+                log::error!("Bindle Parcel 'model' could not be fetched!");
                 BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
             })?;
         log::info!(
@@ -96,6 +115,7 @@ impl BindleLoader {
             .get_parcel(bindle_url, &metadata_parcel.label.sha256)
             .await
             .map_err(|_| {
+                log::error!("Bindle Parcel 'metadata' could not be fetched!");
                 BindleError::BindleParcelNotFetchedError(metadata_parcel.label.name.to_string())
             })?;
         log::info!(

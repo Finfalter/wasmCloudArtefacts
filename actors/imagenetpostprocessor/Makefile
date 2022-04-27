@@ -6,7 +6,8 @@ REVISION = 0
 # list of all contract claims for actor signing (space-separated)
 CLAIMS   = wasmcloud:mlimagenet wasmcloud:builtin:logging
 # registry url for our actor
-REG_URL  = 127.0.0.1:5000/v2/$(PROJECT):$(VERSION)
+REG_URL  = 192.168.178.24:5000/v2/$(PROJECT):$(VERSION)
+#REG_URL  = 127.0.0.1:5000/v2/$(PROJECT):$(VERSION)
 # command to upload to registry (without last wasm parameter)
 PUSH_REG_CMD = wash reg push --insecure $(REG_URL)
 

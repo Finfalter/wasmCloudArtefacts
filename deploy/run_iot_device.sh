@@ -27,6 +27,10 @@ _SHOW_HELP
 ## START CONFIGURATION
 ## ---------------------------------------------------------------
 
+# define the IP address of the remote device
+export IOT_DEVICE_IP=192.168.178.134
+export HOST_DEVICE_IP=192.168.178.24
+
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
 source $_DIR/env
 
@@ -57,9 +61,10 @@ BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 ##
 
 # oci registry - as used by wash
-REG_SERVER=127.0.0.1:5000
+REG_SERVER=${HOST_DEVICE_IP}:5000
 # registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
-REG_SERVER_FROM_HOST=127.0.0.1:5000
+#REG_SERVER_FROM_HOST=127.0.0.1:5000
+REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
 HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
 HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
@@ -192,27 +197,27 @@ push_capability_provider() {
     wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
 }
 
-# start docker services
-# idempotent
-start_services() {
+# # start docker services
+# # idempotent
+# start_services() {
 
-    # ensure we have secrets
-    if [ ! -f $SECRETS ]; then
-        create_secrets
-    fi
+#     # ensure we have secrets
+#     if [ ! -f $SECRETS ]; then
+#         create_secrets
+#     fi
 
-    echo "starting containers with nats and registry .."
+#     echo "starting containers with nats and registry .."
 
-    docker-compose --env-file $SECRETS up -d
-    # give things time to start
-    sleep 5
+#     docker-compose --env-file $SECRETS up -d
+#     # give things time to start
+#     sleep 5
 
-    echo "starting wasmCloud host .."
+#     echo "starting wasmCloud host .."
 
-    # start wasmCloud host in background
-    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    host_cmd start
-}
+#     # start wasmCloud host in background
+#     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
+#     host_cmd start
+# }
 
 start_actors() {
 
@@ -297,7 +302,7 @@ run_all() {
     check_files
 
     # start all the containers
-    start_services
+    #start_services
 
     # start host console to view logs
     if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
@@ -323,7 +328,7 @@ case $1 in
 
     secrets ) create_secrets ;;
     wipe ) wipe_all ;;
-    start ) start_services ;;
+    #start ) start_services ;;
     inventory ) show_inventory ;;
     bindle-start | start-bindle ) start_bindle ;;
     bindle-stop | stop-bindle ) stop_bindle ;;

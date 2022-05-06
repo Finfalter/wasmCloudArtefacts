@@ -5,12 +5,13 @@
 #   git update-index --no-assume-unchanged deploy/env
 # see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
-export BINDLE_URL=${BINDLE_URL:-http://localhost:8080/v1/}
+#export BINDLE_URL=${BINDLE_URL:-http://localhost:8080/v1/}
+export BINDLE_URL=${BINDLE_URL:-http://192.168.178.24:8080/v1/}
 export RUST_LOG=${RUST_LOG:-debug}
 
 # either define BINDLE_HOME (to the git folder),
 # or define BINDLE and BINDLE_SERVER to the paths to the compiled executables
-export BINDLE_HOME=$HOME/git/rust/bindle
+export BINDLE_HOME=$HOME/dev/rust/bindle
 
 if [ -z "$BINDLE" ] && [ -n "$BINDLE_HOME" ]; then
   export BINDLE=${BINDLE_HOME}/target/debug/bindle
@@ -20,5 +21,5 @@ if [ -z "$BINDLE_SERVER" ] && [ -n "$BINDLE_HOME" ]; then
 fi
 
 # installation directory of wasmcloud host
-export WASMCLOUD_HOST_HOME=$HOME/wasmcloud-0.53
+export WASMCLOUD_HOST_HOME=$HOME/dev/wasmcloud/wasmCloudHost
 

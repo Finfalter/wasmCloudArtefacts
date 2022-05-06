@@ -221,7 +221,8 @@ start_actors() {
     cd ${_DIR}/../actors
     for i in */; do
         if [ -f $i/Makefile ]; then
-            make -C $i build push start
+            #make -C $i build push start
+            make -C $i push start
         fi
     done
     cd $_here
@@ -234,10 +235,10 @@ start_providers() {
 
     echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
 
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 50000
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 240000
 
     # make sure inference provider is built
-    make -C ${_DIR}/../providers/mlinference all
+    # make -C ${_DIR}/../providers/mlinference all
 
     echo "starting capability provider '${MLINFERENCE_REF}' from your local registry .. '${MLINFERENCE_REF}'"
 

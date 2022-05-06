@@ -64,7 +64,7 @@ REG_SERVER_FROM_HOST=127.0.0.1:5000
 HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
 HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
 
-MLINFERENCE_REF=${REG_SERVER}/mlinference:0.1.0
+MLINFERENCE_REF=${REG_SERVER}/mlinference:0.2.1
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
@@ -185,7 +185,7 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
-    echo "\npushing capability provider 'mlinference:0.1.0' to your local registry .."
+    echo "\npushing capability provider 'mlinference:0.2.1' to your local registry .."
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
@@ -232,12 +232,14 @@ start_actors() {
 start_providers() {
     local _host_id=$(host_id)
 
-    echo "starting capability provider 'mlinference:0.1.0' to your local registry .."
+    echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
 
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 50000
 
     # make sure inference provider is built
     make -C ${_DIR}/../providers/mlinference all
+
+    echo "starting capability provider '${MLINFERENCE_REF}' from your local registry .. '${MLINFERENCE_REF}'"
 
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
 }

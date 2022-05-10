@@ -67,4 +67,9 @@ ___
 * show logs
 * explain the call chain in the logs
 
+___
 
+
+## Troubleshooting
+
+* In case __http-server__ does not load from its remote registry, load it from file-system. In order to prepare, execute `wash reg pull wasmcloud.azurecr.io/httpserver:0.15.0`

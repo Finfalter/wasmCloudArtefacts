@@ -233,17 +233,17 @@ start_actors() {
 start_providers() {
     local _host_id=$(host_id)
 
-    echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
-
-    # maybe put --timeout-ms 120000 instead of --skip-wait
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 120000
-
     # make sure inference provider is built
     # make -C ${_DIR}/../providers/mlinference all
 
     echo "starting capability provider '${MLINFERENCE_REF}' from your local registry .. '${MLINFERENCE_REF}'"
 
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --skip-wait
+
+    echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
+
+    # maybe put --timeout-ms 120000 instead of --skip-wait
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --skip-wait
 }
 
 # base-64 encode file into a string

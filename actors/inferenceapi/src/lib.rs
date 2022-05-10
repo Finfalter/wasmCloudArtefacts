@@ -33,7 +33,7 @@ impl HttpServer for InferenceapiActor {
         debug!("Segments: {:?}", segments);
 
         match (req.method.as_ref(), segments.as_slice()) {
-            ("PUT", [model_name]) => {
+            ("POST", [model_name]) => {
                 debug!("receiving POST(model) ..");
 
                 // extract

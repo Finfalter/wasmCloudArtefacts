@@ -238,7 +238,7 @@ start_providers() {
 
     echo "starting capability provider '${MLINFERENCE_REF}' from your local registry .. '${MLINFERENCE_REF}'"
 
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --skip-wait
+	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 120000
 
     echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
 

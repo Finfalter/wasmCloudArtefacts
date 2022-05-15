@@ -2,6 +2,11 @@
 
 # Structure
 
+## Pre-requisites
+
+* `docker container stop registry`
+* `export SMITHY_CACHE=NO_EXPIRE` in order to let the application also start in offline mode
+
 ## Host
 
 ### Basics

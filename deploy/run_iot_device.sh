@@ -27,9 +27,7 @@ _SHOW_HELP
 ## START CONFIGURATION
 ## ---------------------------------------------------------------
 
-# define the IP address of the remote device
-export IOT_DEVICE_IP=192.168.178.134
-export HOST_DEVICE_IP=192.168.178.24
+check=$(printf '\342\234\224\n' | iconv -f UTF-8)
 
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
 source $_DIR/env
@@ -66,10 +64,12 @@ REG_SERVER=${HOST_DEVICE_IP}:5000
 #REG_SERVER_FROM_HOST=127.0.0.1:5000
 REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
-HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
-HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
+#HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
+HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
-MLINFERENCE_REF=${REG_SERVER}/mlinference:0.2.1
+MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.2.1
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
@@ -148,7 +148,7 @@ __SECRETS
 }
 
 start_bindle() {
-    echo "\n[bindle-server startup]"
+    printf "\n[bindle-server startup]\n"
 
     if [ -z "$BINDLE_SERVER" ] || [ ! -x $BINDLE_SERVER ]; then
       echo "You must define BINDLE_HOME or BINDLE_SERVER"
@@ -166,7 +166,7 @@ start_bindle() {
 }
 
 stop_bindle() {
-    echo "\n[bindle-server shutdown]"
+    printf "\n[bindle-server shutdown]\n"
 
     eval '"$BINDLE_SHUTDOWN_SCRIPT"'
 }
@@ -174,7 +174,7 @@ stop_bindle() {
 create_bindle() {   
     start_bindle
 
-    echo "\n[bindle creation]"
+    printf "\n[bindle creation]\n"
 
     if [ -z "$BINDLE" ] || [ ! -x $BINDLE ]; then
       echo "You must define BINDLE_HOME or BINDLE"
@@ -190,34 +190,54 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
-    echo "\npushing capability provider 'mlinference:0.1.0' to your local registry .."
+    echo "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
     wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
+
+    echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
+    wash reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
 }
 
-# # start docker services
-# # idempotent
-# start_services() {
+# start docker services
+# idempotent
+start_services() {
 
-#     # ensure we have secrets
-#     if [ ! -f $SECRETS ]; then
-#         create_secrets
-#     fi
+    # ensure we have secrets
+    if [ ! -f $SECRETS ]; then
+        create_secrets
+    fi
 
-#     echo "starting containers with nats and registry .."
+    echo "starting containers with nats and registry .."
 
-#     docker-compose --env-file $SECRETS up -d
-#     # give things time to start
-#     sleep 5
+    docker-compose --env-file $SECRETS up -d
+    # give things time to start
+    sleep 5
 
-#     echo "starting wasmCloud host .."
+    echo "starting wasmCloud host .."
 
-#     # start wasmCloud host in background
-#     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-#     host_cmd start
-# }
+    # start wasmCloud host in background
+    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
+    host_cmd start
+}
+
+# help preparing remote device
+# idempotent
+prepare_remote_device() {
+
+    printf "\nTARGET_DEVICE_IP is detected to be remote --> you try to deploy the runtime on a remote node\n\n"
+    printf "In order to prepare well you certainly\n"
+    printf "$check loaded ${_DIR}/../iot/configure_edge.sh to the remote node\n"
+    printf "$check loaded ${_DIR}/../iot/restart_edge.sh to the remote node\n"
+    printf "$check 'source ./configure_edge.sh' on the remote node\n"
+    printf "$check started NATS ('nats-server --jetstream') on the remote node\n"
+    printf "$check started wasmCloud runtime ('restart_edge.sh') on the remote node\n"
+    printf "$check 'set HOST_DEVICE_IP in env.sh\n"
+    printf "$check 'set TARGET_DEVICE_IP in env.sh\n\n"
+
+    read  -n 1 -p "press any button to start deployment"
+}
 
 start_actors() {
 
@@ -226,7 +246,7 @@ start_actors() {
     cd ${_DIR}/../actors
     for i in */; do
         if [ -f $i/Makefile ]; then
-            make -C $i build push start
+            make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
         fi
     done
     cd $_here
@@ -237,16 +257,16 @@ start_actors() {
 start_providers() {
     local _host_id=$(host_id)
 
-    echo "starting capability provider '${HTTPSERVER_REF}' from remote registry .."
-
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 240000
-
     # make sure inference provider is built
     #make -C ${_DIR}/../providers/mlinference all
 
-    echo "starting capability provider '${MLINFERENCE_REF}' from your local registry .."
-
+    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+
+    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
+    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    #cd ../../../capability-providers/httpserver-rs && make push && make start
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
 }
 
 # base-64 encode file into a string
@@ -303,8 +323,20 @@ run_all() {
     fi
     check_files
 
-    # start all the containers
-    #start_services
+    # start all the containers in case the target is localhost
+    if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
+        # help preparing to ramp up the remote device
+        prepare_remote_device
+
+        # in case you do not run a local registry, switch it on
+        docker container start registry
+    else 
+        # in case you still run a local registry, switch it off
+        docker container stop registry
+
+        echo "starting runtime, nats and registry on host"
+        start_services
+    fi
 
     # start host console to view logs
     if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
@@ -330,7 +362,7 @@ case $1 in
 
     secrets ) create_secrets ;;
     wipe ) wipe_all ;;
-    #start ) start_services ;;
+    start ) start_services ;;
     inventory ) show_inventory ;;
     bindle-start | start-bindle ) start_bindle ;;
     bindle-stop | stop-bindle ) stop_bindle ;;

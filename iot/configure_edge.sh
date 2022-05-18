@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# IOT device
+# to be executed on the TARGET device
 # push with `mdt push <filename>`
+# execute with `source ./configure_edge.sh`
 
 export RUST_LOG=debug
 export WASMCLOUD_OCI_ALLOWED_INSECURE=192.168.178.24:5000

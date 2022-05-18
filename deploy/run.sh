@@ -61,8 +61,10 @@ REG_SERVER=127.0.0.1:5000
 # registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
 REG_SERVER_FROM_HOST=127.0.0.1:5000
 
-HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
-HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
+#HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+HTTPSERVER_REF=127.0.0.1:5000/httpserver:0.15.1
+HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
 MLINFERENCE_REF=${REG_SERVER}/mlinference:0.1.0
 
@@ -232,13 +234,14 @@ start_actors() {
 start_providers() {
     local _host_id=$(host_id)
 
-    echo "starting capability provider 'mlinference:0.1.0' to your local registry .."
 
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    cd ../../../capability-providers/httpserver-rs && make push && make start
 
     # make sure inference provider is built
     #make -C ${_DIR}/../providers/mlinference all
 
+    echo "starting capability provider 'mlinference' from your local registry .."
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
 }
 

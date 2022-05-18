@@ -5,21 +5,60 @@
 #   git update-index --no-assume-unchanged deploy/env
 # see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
+# define the IP address of the host 
+export HOST_DEVICE_IP=192.168.178.24
+
+if [ -z ${HOST_DEVICE_IP+x} ] 
+then 
+  echo -n "HOST_DEVICE_IP is unset - " 
+  echo "assumption: host is localhost"
+  export HOST_DEVICE_IP=${HOST_DEVICE_IP:-127.0.0.1}
+else 
+  echo "HOST_DEVICE_IP is set to '$HOST_DEVICE_IP'"
+
+  export BINDLE_IP_ADDRESS_PORT=${HOST_DEVICE_IP}:8080
+  echo "BINDLE_IP_ADDRESS_PORT is set to '$BINDLE_IP_ADDRESS_PORT'"
+fi
+
+# define the IP address of the (remote) target device 
+export TARGET_DEVICE_IP=192.168.178.148
+
+if [ -z ${TARGET_DEVICE_IP+x} ] 
+then 
+  echo -n "TARGET_DEVICE_IP is unset - " 
+  echo "assumption: target is localhost"
+  export TARGET_DEVICE_IP=${TARGET_DEVICE_IP:-127.0.0.1}
+else 
+  echo "TARGET_DEVICE_IP is set to '$TARGET_DEVICE_IP'"
+
+  export WASMCLOUD_CTL_HOST=${TARGET_DEVICE_IP}
+  echo "WASMCLOUD_CTL_HOST is set to '$WASMCLOUD_CTL_HOST'"
+fi
+
 #export BINDLE_URL=${BINDLE_URL:-http://localhost:8080/v1/}
-export BINDLE_URL=${BINDLE_URL:-http://192.168.178.24:8080/v1/}
+#export BINDLE_URL=${BINDLE_URL:-http://192.168.178.24:8080/v1/}
+export BINDLE_URL=${BINDLE_URL:-http://${HOST_DEVICE_IP}:8080/v1/}
+echo "BINDLE_URL is set to '${BINDLE_URL}'"
+
 export RUST_LOG=${RUST_LOG:-debug}
+echo "RUST_LOG is set to '${RUST_LOG}'"
 
 # either define BINDLE_HOME (to the git folder),
 # or define BINDLE and BINDLE_SERVER to the paths to the compiled executables
 export BINDLE_HOME=$HOME/dev/rust/bindle
+echo "BINDLE_HOME is set to '${BINDLE_HOME}'"
 
 if [ -z "$BINDLE" ] && [ -n "$BINDLE_HOME" ]; then
   export BINDLE=${BINDLE_HOME}/target/debug/bindle
+  echo "BINDLE is set to '${BINDLE}'"
 fi
 if [ -z "$BINDLE_SERVER" ] && [ -n "$BINDLE_HOME" ]; then
   export BINDLE_SERVER=${BINDLE_HOME}/target/debug/bindle-server
+  echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
 fi
 
 # installation directory of wasmcloud host
 export WASMCLOUD_HOST_HOME=$HOME/dev/wasmcloud/wasmCloudHost
+echo "WASMCLOUD_HOST_HOME is set to '${WASMCLOUD_HOST_HOME}'"
 
+echo 

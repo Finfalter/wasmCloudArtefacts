@@ -6,7 +6,7 @@ The current focus narrows any type of machine learning application to the use-ca
 
 ### Structure
 
-* for a general introduction, see below
+* for a general introduction, see [below](#machine-learning-applications)
 * configure and deploy on intel architecture
 * configure and deploy on [ARM](./arm_architecture.html) (aarch64) architecture
 

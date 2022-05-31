@@ -19,7 +19,7 @@ The current focus narrows any type of machine learning application to the use-ca
 ![generic application](images/application.png)
 *structure of a generic machine learning application*
 
-![generic application](images/application-excalidraw.png)
+![generic application](images/application-excalidraw-wo-background.png)
 *data flow explained*
 
 #### Deployment and Provisioning

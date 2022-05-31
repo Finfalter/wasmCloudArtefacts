@@ -1,6 +1,0 @@
-# values here will be passed as config_b64
-[values]
-lazy_load = false
-
-[models]
-zoo = { identity = "identity_model/0.2.0", plus3 = "plus3/0.1.0", mobilenetv27 = "mobilenetv2-7/0.1.0", squeezenetv117 = "squeezenetv1-1-7/0.1.0"}

@@ -1,6 +1,6 @@
 ## Machine Learning with wasmCloud
 
-These pages are supposed to document how set up and deploy machine learning applications based on [wasmCloud](https://wasmcloud.dev/). 
+These pages are supposed to document how to set up and deploy machine learning applications based on [wasmCloud](https://wasmcloud.dev/). 
 
 The current focus narrows any type of machine learning application to the use-case of __*prediction*__ aka __*inferencing*__.
 
@@ -8,7 +8,7 @@ The current focus narrows any type of machine learning application to the use-ca
 
 * for a general introduction, see [below](#machine-learning-applications)
 * configure and deploy on intel architecture
-* configure and deploy on [ARM](./arm_architecture.html) (aarch64) architecture
+* configure and deploy on [__ARM__](./arm_architecture.html) (`aarch64`) architecture
 
 ### Machine Learning applications
 

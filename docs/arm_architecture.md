@@ -2,7 +2,20 @@
 
 This guide specifically addresses [__Coral dev board__](https://coral.ai/docs/dev-board/datasheet/) with its __Quad-core ARM Cortex-A53__. However, a deployment on other Arm based devices should be possible in a similar way.
 
-Even though Coral dev board also disposes of an Edge TPU for accelerated inferencing, this guide currently addresses inferencing on the Arm cpu exclusively.
+Even though Coral dev board also disposes of an Edge TPU for accelerated inferencing, this guide currently addresses inferencing on the ARM __cpu__ exclusively.
+
+## Structure
+
+- [Build and deploy on ARM devices](#build-and-deploy-on-arm-devices)
+  - [Structure](#structure)
+  - [Setup](#setup)
+  - [Installation](#installation)
+  - [Compilation](#compilation)
+    - [Capability provider](#capability-provider)
+  - [Configuration](#configuration)
+    - [Network](#network)
+    - [ARM device](#arm-device)
+  - [Deployment](#deployment)
 
 ## Setup
 
@@ -39,11 +52,16 @@ The hardware target for Coral dev board is known as `aarch64`. All actors are in
 
 The two capability providers in this application are __http-server__ and __mlinference__. __https-server__ is already available for `aarch64` but __mlinference__ has to be built. The recommended procedure is to cross compile the capability provider. The following steps guide through the sequence of cross-compilation.
 
-### Capability provider mlinference
+### Capability provider
 
-* Make sure that `par_targets` in `providers/mlinference/provider.mk` comprises target `aarch64-unknown-linux-gnu`, e.g.
+- Make sure that `par_targets` in `providers/mlinference/provider.mk` comprises target `aarch64-unknown-linux-gnu`, e.g.
 
-* in `providers/mlinference` create a file named `Cross.toml` with the following content:
+```bash
+par_targets ?= \
+    aarch64-unknown-linux-gnu
+```
+
+- in `providers/mlinference` create a file named `Cross.toml` with the following content:
 
 ```toml
 [target.armv7-unknown-linux-gnueabihf]
@@ -67,20 +85,15 @@ passthrough = [
 ]
 ```
 
-* Set the environment varialbe `XDG_CACHE_HOME` to the path the current user has write access, e.g. `XDG_CACHE_HOME=/tmp`
+- Set the environment varialbe `XDG_CACHE_HOME` to the path the current user has write access, e.g. `XDG_CACHE_HOME=/tmp`
 
-```bash
-par_targets ?= \
-    aarch64-unknown-linux-gnu
-```
-
-* Eventually, in `providers/mlinference` build __mlinference__ with `make par-full`
+- Eventually, in `providers/mlinference` build __mlinference__ with `make par-full`
 
 ## Configuration
 
 The configuration is slightly more envolved. Related scripts allow to selectively deploy the machine learning application may either on the development machine or on the ARM device. 
 
-### Network configuration
+### Network
 
 On the development machine in `deploy/env` there are the new environment variables `HOST_DEVICE_IP` and `TARGET_DEVICE_IP`. They represent the address of the development machine (host) and the ARM device (target device) respectively.
 
@@ -95,15 +108,45 @@ export TARGET_DEVICE_IP=192.168.178.148
 
 ### ARM device
 
-Given `TARGET_DEVICE_IP` does not equal to `127.0.0.1` and `deploy/run_iot_device.sh` is launched, a checklist reminds of all points which should have been checked by now:
+Given `TARGET_DEVICE_IP` does not equal to `127.0.0.1` and `deploy/run_iot_device.sh` is launched, a checklist is displayed comprising all preparation steps which should have been done by now:
 
-* set `HOST_DEVICE_IP` in `deploy/env`
-* set `TARGET_DEVICE_IP` in `deploy/env`
-* loaded `iot/configure_edge.sh` to the target device
-* loaded `iot/restart_edge.sh` to the target device
-* `source ./configure_edge.sh` on the target device
-* started NATS server (`nats-server --jetstream`) on the target device
-* started wasmCloud runtime (`restart_edge.sh`) on the target device
+- set a value for `HOST_DEVICE_IP` in `deploy/env`
+- set a value for `TARGET_DEVICE_IP` in `deploy/env`
+- uploaded `iot/configure_edge.sh` to the target device
+- uploaded `iot/restart_edge.sh` to the target device
+- `source ./configure_edge.sh` on the target device
+- started NATS server (`nats-server --jetstream`) on the target device
+- started wasmCloud runtime (`restart_edge.sh`) on the target device
+
+The bulk of configuration is done in `iot/configure_edge.sh`:
+
+```bash
+export RUST_LOG=debug
+export WASMCLOUD_OCI_ALLOWED_INSECURE=192.168.178.24:5000
+export WASMCLOUD_RPC_TIMEOUT_MS=16000
+export BINDLE_URL=http://192.168.178.24:8080/v1/
+cd ~/wasmcloudHost
+```
+
+Set the log level with `RUST_LOG` according to your needs.
+
+`WASMCLOUD_OCI_ALLOWED_INSECURE` is used in a development context only. If this is omitted, wasmCloud runtime prohibits unauthenticated access to OCI registries. For further details see [Allowing unauthenticated OCI registry access](https://wasmcloud.dev/app-dev/workflow/). The value this environment variable is assigned to is supposed to represent the OCI registry where the artifacts of the application are stored. Since the OCI registry in this setup is hosted on the development machine, `192.168.178.24` in this example is the IP address of the development machine.
+
+This guide targets inference on ARM cpus. Depending on the respective model and data this may take a while. Since wasmCloud has a built-in timeout of two seconds, its value is increased proactively in order to avoid *"internal server errors"* resulting in HTTP 503 like responses upon inference requests. Set the value of `WASMCLOUD_RPC_TIMEOUT_MS` >2000.
+
+`BINDLE_URL` represents the endpoint of bindle server where the models are stored.
+
+The script assumes that the runtime is located at `~/wasmcloudHost`. This is where the the script goes to in the last line.
+
+In order to re-start the runtime `restart_edge.sh` may be used. It
+
+- stops the runtime in case it is still active
+- runs the configuration script `configure_edge.sh` which is supposed to be one file level up relative to `restart_edge.sh`
+- removes runtime's logs
+- kills any orphaned processes which are related to the application
+- starts wasmCloud runtime
+
+> The folder structure may have to be modified
 
 ## Deployment
 

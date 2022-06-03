@@ -19,7 +19,7 @@ Even though Coral dev board also disposes of an Edge TPU for accelerated inferen
 
 ## Setup
 
-> Note that all almost all steps to do in order to deploy on ARM are already implemented in branch `coral`.
+> Note that all almost all steps to do in order to deploy on ARM are already implemented in __branch `coral`__.
 >
 > Details are explained here merely for completeness and transparency.
 
@@ -91,7 +91,7 @@ passthrough = [
 
 ## Configuration
 
-The configuration is slightly more envolved. Related scripts allow to selectively deploy the machine learning application may either on the development machine or on the ARM device. 
+The configuration is slightly more envolved. Related scripts allow to selectively deploy the machine learning application may either on the development machine or on the ARM device.
 
 ### Network
 
@@ -146,7 +146,7 @@ In order to re-start the runtime `restart_edge.sh` may be used. It
 - kills any orphaned processes which are related to the application
 - starts wasmCloud runtime
 
-> The folder structure may have to be modified
+> The folder structure in __`configure_edge.sh`__ and __`restart_edge.sh`__ may have to be modified.
 
 ## Deployment
 

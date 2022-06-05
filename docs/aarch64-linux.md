@@ -1,4 +1,4 @@
-# Build and deploy on ARM devices
+# Build and run on aarch64 Linux
 
 This guide specifically addresses [__Coral dev board__](https://coral.ai/docs/dev-board/datasheet/) with its __Quad-core ARM Cortex-A53__. However, a deployment on other Arm based devices should be possible in a similar way.
 
@@ -6,7 +6,7 @@ Even though Coral dev board also disposes of an Edge TPU for accelerated inferen
 
 ## Structure
 
-- [Build and deploy on ARM devices](#build-and-deploy-on-arm-devices)
+- [Build and run on aarch64 Linux](#build-and-run-on-aarch64-linux)
   - [Structure](#structure)
   - [Setup](#setup)
   - [Installation](#installation)
@@ -54,14 +54,14 @@ The two capability providers in this application are __http-server__ and __mlinf
 
 ### Capability provider
 
-- Make sure that `par_targets` in `providers/mlinference/provider.mk` comprises target `aarch64-unknown-linux-gnu`, e.g.
+- Make sure that `par_targets` in __providers/mlinference/provider.mk__ comprises target `aarch64-unknown-linux-gnu`, e.g.
 
 ```bash
 par_targets ?= \
     aarch64-unknown-linux-gnu
 ```
 
-- in `providers/mlinference` create a file named `Cross.toml` with the following content:
+- in __providers/mlinference__ create a file named `Cross.toml` with the following content:
 
 ```toml
 [target.armv7-unknown-linux-gnueabihf]
@@ -87,7 +87,7 @@ passthrough = [
 
 - Set the environment varialbe `XDG_CACHE_HOME` to the path the current user has write access, e.g. `XDG_CACHE_HOME=/tmp`
 
-- Eventually, in `providers/mlinference` build __mlinference__ with `make par-full`
+- Eventually, in __providers/mlinference__ build __mlinference__ with `make par-full`
 
 ## Configuration
 
@@ -95,7 +95,7 @@ The configuration is slightly more envolved. Related scripts allow to selectivel
 
 ### Network
 
-On the development machine in `deploy/env` there are the new environment variables `HOST_DEVICE_IP` and `TARGET_DEVICE_IP`. They represent the address of the development machine (host) and the ARM device (target device) respectively.
+On the development machine in __deploy/env__ there are the new environment variables `HOST_DEVICE_IP` and `TARGET_DEVICE_IP`. They represent the address of the development machine (host) and the ARM device (target device) respectively.
 
 In case both parameters are not set, the application is going to be deployed on the development machine. In case `TARGET_DEVICE_IP` is set to the address of the ARM device, the application is going to be deployed remotely. In the latter case the value for `HOST_DEVICE_IP` should be set such that both addresses are in the same network.
 
@@ -108,17 +108,17 @@ export TARGET_DEVICE_IP=192.168.178.148
 
 ### ARM device
 
-Given `TARGET_DEVICE_IP` does not equal to `127.0.0.1` and `deploy/run_iot_device.sh` is launched, a checklist is displayed comprising all preparation steps which should have been done by now:
+Given `TARGET_DEVICE_IP` does not equal to `127.0.0.1` and __deploy/run_iot_device.sh__ is launched, a checklist is displayed comprising all preparation steps which should have been done by now:
 
-- set a value for `HOST_DEVICE_IP` in `deploy/env`
-- set a value for `TARGET_DEVICE_IP` in `deploy/env`
-- uploaded `iot/configure_edge.sh` to the target device
-- uploaded `iot/restart_edge.sh` to the target device
+- set a value for `HOST_DEVICE_IP` in __deploy/env__
+- set a value for `TARGET_DEVICE_IP` in __deploy/env__
+- uploaded __iot/configure_edge.sh__ to the target device
+- uploaded __iot/restart_edge.sh__ to the target device
 - `source ./configure_edge.sh` on the target device
 - started NATS server (`nats-server --jetstream`) on the target device
-- started wasmCloud runtime (`restart_edge.sh`) on the target device
+- started wasmCloud runtime (__restart_edge.sh__) on the target device
 
-The bulk of configuration is done in `iot/configure_edge.sh`:
+The bulk of configuration is done in __iot/configure_edge.sh__:
 
 ```bash
 export RUST_LOG=debug
@@ -136,17 +136,17 @@ This guide targets inference on ARM cpus. Depending on the respective model and 
 
 `BINDLE_URL` represents the endpoint of bindle server where the models are stored.
 
-The script assumes that the runtime is located at `~/wasmcloudHost`. This is where the the script goes to in the last line.
+The script assumes that the runtime is located at __~/wasmcloudHost__. This is where the the script goes to in the last line.
 
-In order to re-start the runtime `restart_edge.sh` may be used. It
+In order to re-start the runtime __restart_edge.sh__ may be used. It
 
 - stops the runtime in case it is still active
-- runs the configuration script `configure_edge.sh` which is supposed to be one file level up relative to `restart_edge.sh`
+- runs the configuration script __configure_edge.sh__ which is supposed to be one file level up relative to __restart_edge.sh__
 - removes runtime's logs
 - kills any orphaned processes which are related to the application
 - starts wasmCloud runtime
 
-> The folder structure in __`configure_edge.sh`__ and __`restart_edge.sh`__ may have to be modified.
+> The folder structure in __configure_edge.sh__ and __restart_edge.sh__ may have to be modified.
 
 ## Deployment
 

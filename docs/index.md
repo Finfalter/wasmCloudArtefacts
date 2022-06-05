@@ -15,6 +15,7 @@ The current focus narrows any type of machine learning application to the use-ca
     - [Prerequisites](#prerequisites)
       - [Wasmcloud host](#wasmcloud-host)
       - [Bindle](#bindle)
+      - [Target](#target)
 
 ## Machine Learning applications
 
@@ -35,9 +36,6 @@ The current focus narrows any type of machine learning application to the use-ca
 
 ## Build and Run
 
-- On [x86_64 Linux](./x86_64-linux)
-- On [aarch64 Linux](./aarch64-linux.html) (Coral dev board)
-
 ### Prerequisites
 
 #### Wasmcloud host
@@ -48,3 +46,8 @@ and unpack it. The path to the download folder should be set as `WASMCLOUD_HOST_
 #### Bindle
 
 We recommand using [bindle version v0.7.1](https://github.com/deislabs/bindle/tags). The latest version in github HEAD (as of March 2022) has not been released, and includes signature checks which are not compatible with the scripts in this repo.
+
+#### Target
+
+- On [x86_64 Linux](./x86_64-linux.html)
+- On [aarch64 Linux](./aarch64-linux.html) (Coral dev board)

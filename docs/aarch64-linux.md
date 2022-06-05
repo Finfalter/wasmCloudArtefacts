@@ -61,7 +61,7 @@ par_targets ?= \
     aarch64-unknown-linux-gnu
 ```
 
-- in __providers/mlinference__ create a file named `Cross.toml` with the following content:
+- in __providers/mlinference__ create a file named __Cross.toml__ with the following content:
 
 ```toml
 [target.armv7-unknown-linux-gnueabihf]

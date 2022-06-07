@@ -16,17 +16,25 @@ The current focus narrows any type of machine learning application to the use-ca
       - [Wasmcloud host](#wasmcloud-host)
       - [Bindle](#bindle)
     - [Targets](#targets)
+  - [Supported Inference Engines](#supported-inference-engines)
+  - [Restrictions](#restrictions)
 
 ## Machine Learning applications
 
-> __TODO__ some nice intro
+In order to be able to do inferencing one has to solve other challenges as model provisioning and the deployment of application software before. Since these kinds of requirements are usually assigned to __*"Operations"*__, this is what is discussed first.
 
 ### Operation's perspective
+
+From a high-level perspective each machine learning application in this scope comprises three different artifacts: a ([wasmCloud](https://wasmcloud.dev/)) __runtime__, a ([bindle](https://github.com/deislabs/bindle)) __model repository__ and an __OCI registry__.
+
+Before any deployment, the runtime does not host any application. The model repository is designed to host (binary) AI models and their metadata and the OCI registry is where the business logic resides. The following screenshot roughly depicts the overall architecture.
 
 ![generic application](images/repo-registry-runtime.png)
 *Application's architecture from an operation's point of view*
 
 ### Development's perspective
+
+The development's point of view focuses the runtime. There are two [capability providers](https://wasmcloud.dev/reference/host-runtime/capabilities/), https-server and mlinference as well as three [actors](https://wasmcloud.dev/reference/host-runtime/actors/), API, post-processor and pre-processor. The following screenshot roughly depicts the overall architecture from a developer's perspective.
 
 ![generic application](images/application.png)
 *structure of a generic machine learning application*
@@ -49,5 +57,23 @@ We recommand using [bindle version v0.7.1](https://github.com/deislabs/bindle/ta
 
 ### Targets
 
-- On [x86_64 Linux](./x86_64-linux.html)
-- On [aarch64 Linux](./aarch64-linux.html) (Coral dev board)
+- [x86_64 Linux](./x86_64-linux.html)
+- [aarch64 Linux](./aarch64-linux.html) (Coral dev board)
+
+## Supported Inference Engines
+
+The capability provider __mlinference__ uses the amazing inference toolkit [tract](https://github.com/sonos/tract) and currently supports the following inference engines
+
+1. [ONNX](https://onnx.ai/)
+2. [Tensorflow](https://www.tensorflow.org/)
+
+## Restrictions
+
+Concerning ONNX, see [tract's documentation](https://github.com/sonos/tract) for a detailed discussion of ONNX format coverage.
+
+Concerning Tensorflow, only TensorFlow 1.x is supported, not Tensorflow 2. However, models of format Tensorflow 2 may be converted to Tensorflow 1.x. For a more detailled discussion, see the following resources:
+
+- [tf1 vs tf2](https://www.tensorflow.org/guide/migrate/tf1_vs_tf2)
+- [primer on tensorflow and keras - the past tf1 and the present tf2](https://stackoverflow.com/questions/59112527/primer-on-tensorflow-and-keras-the-past-tf1-the-present-tf2#:~:text=In%20terms%20of%20the%20behavior,full%20list%20of%20data%20types)
+
+Currently, there is no support of any accelerators like GPUs or TPUs. On the one hand, there is a range of [coral devices](https://coral.ai/products/) like the [Dev board](https://coral.ai/docs/dev-board/get-started) supporting Tensorflow for TPU based inference. However, they only support the [Tensorflow Lite](https://www.tensorflow.org/lite) derivative. For more information see Coral's [Edge TPU inferencing overview](https://coral.ai/docs/edgetpu/inference/).

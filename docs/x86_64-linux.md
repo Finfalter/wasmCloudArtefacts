@@ -13,7 +13,7 @@
 
 ## Prerequisites
 
-Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2).
+The [**NATS**](https://nats.io/) and the local registry are served via a Docker container, see [installation notes](https://wasmcloud.dev/overview/installation/install-with-docker/). Also, make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2).
 
 ## Build
 
@@ -24,10 +24,10 @@ From the top-level directory build with `make`. This should complete without err
 Update paths in file **deploy/env** to match your development environment.
 
 Be sure to set `BINDLE` and `BINDLE_SERVER` in **deploy/env** to the paths to the bindle cli
-and bindle server executables, respectively. If they are in your $PATH,
+and bindle server executables, respectively. If they are in your `$PATH`,
 you can just set these to `bindle` and `bindle-server`. If you built
-bindle from git, use the 0.7.1 tag, run `cargo build`, and set
-BINDLE_HOME to the path to the git repo.
+bindle from git, use the __0.7.1 tag__, run `cargo build`, and set
+`BINDLE_HOME` to the path to the git repo.
 
 ### Prepare models
 

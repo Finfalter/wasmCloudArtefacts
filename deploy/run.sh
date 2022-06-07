@@ -185,7 +185,8 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
-    echo "\npushing capability provider 'mlinference:0.2.1' to your local registry .."
+    echo
+    echo "pushing capability provider '${MLINFERENCE_REF}' to your local registry .."
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 

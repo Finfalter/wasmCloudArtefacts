@@ -91,8 +91,8 @@ The capability provider __mlinference__ uses the amazing inference toolkit [trac
 
 Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
 
-- __identity__ of ONNX format
-- __plus3__ of Tensorflow format
+- __identity__ of ONNX format, e.g. `curl -v POST 0.0.0.0:8078/identity -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'`
+- __plus3__ of Tensorflow format, e.g. `curl -v POST 0.0.0.0:8078/plus3 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'`
 - __mobilenetv2.7__ of ONNX format, e.g. `curl --silent -T ../images/lighthouse.jpg localhost:8078/mobilenetv27/matches | jq`
 - __squeezenetv1.1.7__ of ONNX format, e.g. `curl --silent -T ../images/piano.jpg localhost:8078/squeezenetv117/matches | jq`
 

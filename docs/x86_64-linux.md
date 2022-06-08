@@ -61,5 +61,25 @@ diagnosing any problems.
 ./run.sh all --console
 ```
 
+The end of the output should be the inventory of the wasmcloud runtime. It should be similar to the following output:
+
+```bash
+                                     Host Inventory (NDNE7IKOP5KLHKYPTFG7NOWRHIELCCDOAJIVXXQKBMMIONJBV5HLMSYI)                                    
+                                                                                                                                                  
+  hostcore.osfamily                                                                  unix                                                         
+  device_ip                                                                          127.0.0.1                                                    
+  hostcore.arch                                                                      x86_64                                                       
+  hostcore.os                                                                        linux                                                        
+                                                                                                                                                  
+  Actor ID                                                   Name                    Image Reference                                              
+  MBCBEIRRVMVMZQMPGJQHRKYFRW6DT2NXSBSK7YN3WN7XHEAUKPNQ45LH   inferenceapi            127.0.0.1:5000/v2/inferenceapi:0.1.0                         
+  MCS6WWTTWAD4WF46FTT57TGKEH6S6QXNBAVI3PKQ2SSH2J3UYLHD77SD   imagenetpostprocessor   127.0.0.1:5000/v2/imagenetpostprocessor:0.1.0                
+  MDLHNK4V6IHOUY54QBNIAGUNHX373HARLOX6WGKKHK7CKDKHXRDPWKHX   imagepreprocessor       127.0.0.1:5000/v2/imagepreprocessor:0.1.0                    
+                                                                                                                                                  
+  Provider ID                                                Name                    Link Name               Image Reference                      
+  VDIRCLM2EUPU7JASBU7CWAXHBXCSYR7VAD2UZ5MZJUA47KPMQDOPTCB5   mlinference             default                 127.0.0.1:5000/v2/mlinference:0.2.1  
+  VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP   HTTP Server             default                 127.0.0.1:5000/v2/httpserver:0.15.1
+```
+
 * * *
 [back](./)

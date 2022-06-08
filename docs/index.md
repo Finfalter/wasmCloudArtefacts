@@ -32,6 +32,7 @@ curl --silent -T ../images/whale.jpg localhost:8078/mobilenetv27/matches | jq
     - [Targets](#targets)
   - [Supported Inference Engines](#supported-inference-engines)
   - [Preloaded Models](#preloaded-models)
+  - [Endpoints](#endpoints)
   - [Restrictions](#restrictions)
 
 ## General architecture
@@ -91,10 +92,34 @@ The capability provider __mlinference__ uses the amazing inference toolkit [trac
 
 Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
 
-- __identity__ of ONNX format, e.g. `curl -v POST 0.0.0.0:8078/identity -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'`
-- __plus3__ of Tensorflow format, e.g. `curl -v POST 0.0.0.0:8078/plus3 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'`
-- __mobilenetv2.7__ of ONNX format, e.g. `curl --silent -T ../images/lighthouse.jpg localhost:8078/mobilenetv27/matches | jq`
-- __squeezenetv1.1.7__ of ONNX format, e.g. `curl --silent -T ../images/piano.jpg localhost:8078/squeezenetv117/matches | jq`
+- __identity__ of ONNX format
+- __plus3__ of Tensorflow format
+- __mobilenetv2.7__ of ONNX format
+- __squeezenetv1.1.7__ of ONNX format
+
+Requests against the preloaded models can be done in the following way:
+
+```bash
+# identity
+curl -v POST 0.0.0.0:8078/identity -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+
+# plus3
+curl -v POST 0.0.0.0:8078/plus3 -d '{"dimensions":[1,4],"valueTypes":["ValueF32"],"flags":0,"data":[0,0,128,63,0,0,0,64,0,0,64,64,0,0,128,64]}'
+
+# mobilenetv2
+curl --silent -T ../images/lighthouse.jpg localhost:8078/mobilenetv27/matches | jq
+
+# squeezenetv1
+curl --silent -T ../images/piano.jpg localhost:8078/squeezenetv117/matches | jq
+```
+
+## Endpoints
+
+The application provides three endpoints. The first endpoint routes the input tensor to the related inference engine without any pre-processing. The second endpoint __pre-processes__ the input tensor and routes it to the related inference engine thereafter. The third performs a pre-processing before the prediction step and a __post-processinging__ afterwards.
+
+1. `0.0.0.0:<port>/<model>`, e.g. `0.0.0.0:7078/identity`
+2. `0.0.0.0:<port>/<model>/preprocess`, e.g. `0.0.0.0:7078/squeezenetv117/preprocess`
+3. `0.0.0.0:<port>/<model>/matches`, e.g. `0.0.0.0:7078/squeezenetv117/matches`
 
 ## Restrictions
 

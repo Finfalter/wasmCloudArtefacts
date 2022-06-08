@@ -15,7 +15,7 @@ curl --silent -T ../images/cat.jpg localhost:8078/mobilenetv27/matches | jq
 curl --silent -T ../images/whale.jpg localhost:8078/mobilenetv27/matches | jq
 ```
 
-![tabby cat](images/tabby-cat-small.png)
+![tabby cat](images/whale.png)
 *image classification with data from [imagenet](https://www.image-net.org/)*
 
 ## Structure
@@ -53,7 +53,7 @@ The development's point of view focuses the runtime. There are two [capability p
 ![generic application](images/application.png)
 *structure of a generic machine learning application*
 
-![generic application](images/application-excalidraw-wo-background.png)
+![generic application](images/wasmcloud-ML-generalized-architecture-example.png)
 *data flow*
 
 ## Build and Run

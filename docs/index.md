@@ -2,7 +2,21 @@
 
 These pages are supposed to document how to set up and deploy machine learning applications based on [wasmCloud](https://wasmcloud.dev/).
 
-The current focus narrows any type of machine learning application to the use-case of __*prediction*__ aka __*inferencing*__.
+The current focus narrows any type of machine learning application to the use-case of __*prediction*__ aka __*inferencing*__. Some applied examples may look like the following:
+
+```bash
+curl --silent -T ../images/cat.jpg localhost:8078/mobilenetv27/matches | jq
+```
+
+![tabby cat](images/tabby-cat-small.png)
+*image classification with data from [imagenet](https://www.image-net.org/)*
+
+```bash
+curl --silent -T ../images/whale.jpg localhost:8078/mobilenetv27/matches | jq
+```
+
+![tabby cat](images/tabby-cat-small.png)
+*image classification with data from [imagenet](https://www.image-net.org/)*
 
 ## Structure
 

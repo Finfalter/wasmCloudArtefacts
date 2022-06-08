@@ -156,5 +156,13 @@ cd deploy
 ./run_iot_device.sh all
 ```
 
+Example requests may look like the following:
+
+```bash
+curl --silent -T ../images/cat.jpg 192.168.178.134:8078/mobilenetv27/matches | jq
+
+curl --silent -T ../images/hotdog.jpg 192.168.178.134:8078/squeezenetv117/matches | jq
+```
+
 * * *
 [back](./)

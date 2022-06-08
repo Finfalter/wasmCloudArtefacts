@@ -22,7 +22,7 @@ curl --silent -T ../images/whale.jpg localhost:8078/mobilenetv27/matches | jq
 
 - [Machine Learning with wasmCloud](#machine-learning-with-wasmcloud)
   - [Structure](#structure)
-  - [Machine Learning applications](#machine-learning-applications)
+  - [General architecture](#general-architecture)
     - [Operation's perspective](#operations-perspective)
     - [Development's perspective](#developments-perspective)
   - [Build and Run](#build-and-run)
@@ -31,9 +31,10 @@ curl --silent -T ../images/whale.jpg localhost:8078/mobilenetv27/matches | jq
       - [Bindle](#bindle)
     - [Targets](#targets)
   - [Supported Inference Engines](#supported-inference-engines)
+  - [Preloaded Models](#preloaded-models)
   - [Restrictions](#restrictions)
 
-## Machine Learning applications
+## General architecture
 
 In order to be able to do inferencing one has to solve other challenges as model provisioning and the deployment of application software before. Since these kinds of requirements are usually assigned to __*"Operations"*__, this is what is discussed first.
 
@@ -41,10 +42,15 @@ In order to be able to do inferencing one has to solve other challenges as model
 
 From a high-level perspective each machine learning application in this scope comprises three different artifacts: a ([wasmCloud](https://wasmcloud.dev/)) __runtime__, a ([bindle](https://github.com/deislabs/bindle)) __model repository__ and an __OCI registry__.
 
-Before any deployment, the runtime does not host any application. The model repository is designed to host (binary) AI models and their metadata and the OCI registry is where the business logic resides. The following screenshot roughly depicts the overall architecture.
+Before any deployment, the runtime does not host any application. The model repository is designed to host (binary) AI models as well as their (human readable) metadata. The OCI registry is where the business logic resides. The following screenshot roughly depicts the overall architecture.
 
-![generic application](images/repo-registry-runtime.png)
+![generic architecture](images/repo-registry-runtime.png)
 *Application's architecture from an operation's point of view*
+
+Information about the runtime, including hosted artifacts, can easily accessed via the __washboard__, wasmcloud's web UI. Per default, the washboard is accessible via [http://localhost:4000/](http://localhost:4000/) as soon as the runtime is up and running.
+
+![washboard](images/washboard.png)
+*monitoring of wasmcloud's runtime via the washboard*
 
 ### Development's perspective
 
@@ -80,6 +86,15 @@ The capability provider __mlinference__ uses the amazing inference toolkit [trac
 
 1. [ONNX](https://onnx.ai/)
 2. [Tensorflow](https://www.tensorflow.org/)
+
+## Preloaded Models
+
+Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
+
+- __identity__ of ONNX format
+- __plus3__ of Tensorflow format
+- __mobilenetv2.7__ of ONNX format, e.g. `curl --silent -T ../images/lighthouse.jpg localhost:8078/mobilenetv27/matches | jq`
+- __squeezenetv1.1.7__ of ONNX format, e.g. `curl --silent -T ../images/piano.jpg localhost:8078/squeezenetv117/matches | jq`
 
 ## Restrictions
 

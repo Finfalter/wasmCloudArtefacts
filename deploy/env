@@ -6,7 +6,7 @@
 # see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
 # define the IP address of the host 
-export HOST_DEVICE_IP=192.168.178.24
+#export HOST_DEVICE_IP=192.168.178.24
 
 if [ -z ${HOST_DEVICE_IP+x} ] 
 then 
@@ -21,7 +21,7 @@ else
 fi
 
 # define the IP address of the (remote) target device 
-export TARGET_DEVICE_IP=192.168.178.148
+#export TARGET_DEVICE_IP=192.168.178.148
 
 if [ -z ${TARGET_DEVICE_IP+x} ] 
 then 

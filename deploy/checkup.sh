@@ -71,7 +71,7 @@ check_requirements() {
     fi
 
     if [ $_ok -eq 0 ]; then
-        printf "$check Prerequisites are installed - you're good to go!\n"
+        printf "$check Prerequisites are installed - you're good to go!\n\n"
     else
         printf "Some items were missing or outdated. Please install missing items and try again.\n"
         exit 1

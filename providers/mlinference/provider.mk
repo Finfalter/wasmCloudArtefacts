@@ -37,12 +37,13 @@ ifeq ($(WASH_REG_USER),)
 endif
 
 par_targets ?= \
-	x86_64-unknown-linux-gnu \
-   	x86_64-apple-darwin \
-   	aarch64-unknown-linux-gnu \
-   	aarch64-apple-darwin \
-	armv7-unknown-linux-gnueabihf \
-   	x86_64-pc-windows-gnu
+   	aarch64-unknown-linux-gnu
+	   
+	# x86_64-unknown-linux-gnu
+   	# x86_64-apple-darwin \
+   	# aarch64-apple-darwin \
+	# armv7-unknown-linux-gnueabihf \
+   	# x86_64-pc-windows-gnu
 
 # Lookup table from rust target triple to wasmcloud architecture doubles
 # Thanks to https://stackoverflow.com/a/40919906 for the pointer to

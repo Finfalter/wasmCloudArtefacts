@@ -3,4 +3,3 @@
 subdirs = mlinference
 
 include ../build/makefiles/common.mk
-

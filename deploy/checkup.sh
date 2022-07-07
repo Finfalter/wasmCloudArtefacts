@@ -2,8 +2,9 @@
 
 # make sure you have all the prerequisites installed
 
-check=$(printf '\xE2\x9C\x94\n' | iconv -f UTF-8)
-missing=$(printf '\xE2\x9D\x8C\n' | iconv -f UTF-8)
+check=$(printf '\342\234\224\n' | iconv -f UTF-8)
+missing=$(printf '\xE2\x9C\x94\n' | iconv -f UTF-8)
+
 
 has() {
     command -v $1 >/dev/null
@@ -70,7 +71,7 @@ check_requirements() {
     fi
 
     if [ $_ok -eq 0 ]; then
-        printf "$check Prerequisites are installed - you're good to go! $check $check $check\n"
+        printf "$check Prerequisites are installed - you're good to go!\n\n"
     else
         printf "Some items were missing or outdated. Please install missing items and try again.\n"
         exit 1

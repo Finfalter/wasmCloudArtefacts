@@ -1,4 +1,7 @@
+mod tflite;
 mod tract;
+
+pub use self::tflite::TfLiteEngine;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 pub use tract::{bytes_to_f32_vec, f32_vec_to_bytes, TractEngine, TractSession};
@@ -12,6 +15,7 @@ pub type Graph = u32;
 #[serde(rename_all = "snake_case")]
 pub enum GraphEncoding {
     Onnx,
+    TfLite,
     OpenVino,
     Tensorflow,
 }
@@ -43,23 +47,28 @@ impl Default for ExecutionTarget {
 #[async_trait]
 pub trait InferenceEngine {
     async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph>;
+
     async fn init_execution_context(
         &self,
         graph: Graph,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext>;
+
     async fn set_input(
         &self,
         context: GraphExecutionContext,
         index: u32,
         tensor: &Tensor,
     ) -> InferenceResult<()>;
+
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()>;
+
     async fn get_output(
         &self,
         context: GraphExecutionContext,
         index: u32,
     ) -> InferenceResult<InferenceOutput>;
+
     async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
 }
 
@@ -74,13 +83,34 @@ pub enum InferenceError {
     #[error("ONNX error")]
     OnnxError,
 
+    #[error("Unsupported ExecutionTarget")]
+    UnsupportedExecutionTarget,
+
     #[error("Invalid encoding")]
     InvalidEncodingError,
+
+    #[error("Failed to build model from buffer")]
+    FailedToBuildModelFromBuffer,
+
+    #[error("Failed to get edge TPU context")]
+    EdgeTPUAllocationError,
+
+    #[error("Failed to get InterpreterBuilder")]
+    InterpreterBuilderError,
+
+    #[error("Interpreter build failed")]
+    InterpreterBuildError,
+
+    #[error("Interpreter invocation failed")]
+    InterpreterInvocationError,
+
+    #[error("Tensor allocation failed")]
+    TensorAllocationError,
 
     #[error("Corrupt input tensor")]
     CorruptInputTensor,
 
-    #[error("model reshape failed")]
+    #[error("Model reshape failed")]
     ShapeError(#[from] ndarray::ShapeError),
 
     #[error("Bytes to f32 vec conversion failed")]

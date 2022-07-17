@@ -46,7 +46,7 @@ impl<'a> ModelState<'a, BuiltinOpResolver> {
 pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub graph: Interpreter<'a, BuiltinOpResolver>,
     pub encoding: GraphEncoding,
-    pub input_tensors: Option<Vec<u8>>,
+    pub input_tensors: usize,
     pub output_tensors: Option<Vec<Tensor>>,
 }
 
@@ -55,7 +55,7 @@ impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
         Self {
             graph,
             encoding,
-            input_tensors: None,
+            input_tensors: 0,
             output_tensors: None,
         }
     }
@@ -73,6 +73,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         log::debug!("load() - target: {:#?}", target);
 
         let model_bytes = builder.to_vec();
+        
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
@@ -204,8 +205,10 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             }
         };
 
-        //execution.graph.allocate_tensors().expect("failed to allocate tensors.");
-        let tensor_index = execution.graph.inputs()[0];
+        let tensor_index = execution.graph.inputs()[execution.input_tensors];
+
+        // prepare for multiple input tensors
+        execution.input_tensors = execution.input_tensors + 1;
 
         log::debug!(
             "set_input() - required shape: {:?}",
@@ -231,7 +234,6 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
                     "compute() - cannot find session in state with context {:#?}",
                     context
                 );
-
                 return Err(InferenceError::RuntimeError);
             }
         };
@@ -252,14 +254,23 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         let mut result_tensors: Vec<Tensor> = Vec::new();
 
-        for &output in output_tensors {
+        for &output in output_tensors 
+        {
             let mut results = Vec::new();
-            let tensor_info = interpreter.tensor_info(output).expect("must provide data");
+            let tensor_info = interpreter.tensor_info(output)
+                .ok_or_else(|| {
+                    log::error!("compute() - info for output tensor could not be evaluated");
+                    return InferenceError::RuntimeError;
+                })?;
 
             match tensor_info.element_kind {
                 tflite::context::ElementKind::kTfLiteUInt8 => {
                     let out_tensor: &[u8] =
-                        interpreter.tensor_data(output).expect("must provide data");
+                        interpreter.tensor_data(output)
+                            .map_err(|_| {
+                                log::error!("compute() - failed to get output tensor");
+                                InferenceError::FailedToBuildModelFromBuffer
+                            })?;
                     let scale = tensor_info.params.scale;
                     let zero_point = tensor_info.params.zero_point;
                     results = out_tensor
@@ -269,7 +280,11 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
                 }
                 tflite::context::ElementKind::kTfLiteFloat32 => {
                     let out_tensor: &[f32] =
-                        interpreter.tensor_data(output).expect("must provide data");
+                        interpreter.tensor_data(output)
+                            .map_err(|_| {
+                                log::error!("compute() - failed to get output tensor");
+                                InferenceError::FailedToBuildModelFromBuffer
+                            })?;
                     results = out_tensor.into_iter().copied().collect();
                 }
                 _ => eprintln!(
@@ -290,6 +305,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             result_tensors.push(result_tensor);
         }
 
+        execution.input_tensors = 0;
         execution.output_tensors.replace(result_tensors);
 
         Ok(())

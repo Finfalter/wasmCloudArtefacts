@@ -132,14 +132,6 @@ impl InferenceEngine for TractEngine {
             encoding
         );
 
-        // if !matches!(encoding, &GraphEncoding::Onnx) {
-        //     log::error!("load current implementation can only load ONNX models");
-        //     return Err(InferenceError::InvalidEncodingError);
-        // }
-
-        // let _model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
-        // let model_tf  = tract_tensorflow::tensorflow().model_for_read(&mut model_bytes).unwrap();
-
         let gec = state.key(state.executions.keys());
 
         log::debug!(

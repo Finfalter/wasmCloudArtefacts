@@ -41,7 +41,9 @@ struct MlInferenceProvider {
     ///   - initialize actor link as soon as we receive the putlink command
     ///   - if health check or rpc is received when not ready, return not-ready error
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
-    engine: TractEngine, // could be arc of box of enum or
+    //engine: TractEngine, // could be arc of box of enum or
+    engine: Arc<Box<dyn InferenceEngine + Send + Sync>>,
+    //engine: Engine,
 }
 
 /// use default implementations of provider message handlers

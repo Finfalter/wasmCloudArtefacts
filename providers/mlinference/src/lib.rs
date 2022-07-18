@@ -22,6 +22,18 @@ pub type BindlePath = String;
 pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
 
+// #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+// pub enum Engine {
+//     Tract,
+//     TfLite,
+// }
+
+// impl Default for Engine {
+//     fn default() -> Self {
+//         Engine::Tract
+//     }
+// }
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ModelContext {
     pub bindle_url: BindlePath,

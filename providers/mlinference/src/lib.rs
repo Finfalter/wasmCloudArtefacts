@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error as ThisError;
 use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, ValueType};
 
@@ -21,18 +21,19 @@ pub(crate) use hashmap_ci::make_case_insensitive;
 pub type BindlePath = String;
 pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
+pub type Engine = Arc<Box<dyn InferenceEngine + Send + Sync>>;
 
-// #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-// pub enum Engine {
-//     Tract,
-//     TfLite,
-// }
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+pub enum InferenceFramework {
+    Tract,
+    TfLite,
+}
 
-// impl Default for Engine {
-//     fn default() -> Self {
-//         Engine::Tract
-//     }
-// }
+impl Default for InferenceFramework {
+    fn default() -> Self {
+        InferenceFramework::Tract
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ModelContext {

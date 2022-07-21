@@ -4,8 +4,6 @@ use crate::inference::{
 };
 use async_trait::async_trait;
 use std::sync::Arc;
-//use byteorder::{LittleEndian, ReadBytesExt};
-//use ndarray::Array;
 use edgetpu::EdgeTpuContext;
 use std::collections::{btree_map::Keys, BTreeMap};
 use tflite::Interpreter;
@@ -13,7 +11,6 @@ use tokio::sync::RwLock;
 use wasmcloud_interface_mlinference::{
     InferenceOutput, Status, Tensor, ValueType, TENSOR_FLAG_ROW_MAJOR,
 };
-//use tflite::model::Interpreter;
 use tflite::op_resolver::OpResolver;
 use tflite::ops::builtin::BuiltinOpResolver;
 use tflite::{FlatBufferModel, InterpreterBuilder};
@@ -42,7 +39,6 @@ impl<'a> ModelState<'a, BuiltinOpResolver> {
     }
 }
 
-//#[derive(Debug)]
 pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub graph: Interpreter<'a, BuiltinOpResolver>,
     pub encoding: GraphEncoding,
@@ -117,14 +113,14 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             GraphEncoding::TfLite => FlatBufferModel::build_from_buffer(model_bytes.to_vec())
                 .map_err(|_| {
                     log::error!(
-                        "init_execution_context() building FlatBufferModel from buffer failed"
+                        "init_execution_context() - building FlatBufferModel from buffer failed"
                     );
                     InferenceError::FailedToBuildModelFromBuffer
                 })?,
 
             _ => {
                 log::error!(
-                    "requested encoding '{:?}' is currently not supported",
+                    "init_execution_context() - requested encoding '{:?}' is currently not supported",
                     encoding
                 );
                 return Err(InferenceError::InvalidEncodingError);
@@ -132,7 +128,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         };
 
         let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
-            log::error!("init_execution_context() failed to get edge TPU context");
+            log::error!("init_execution_context() - failed to get edge TPU context");
             InferenceError::FailedToBuildModelFromBuffer
         })?;
 
@@ -140,12 +136,12 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
 
         let builder = InterpreterBuilder::new(model, resolver).map_err(|_| {
-            log::error!("init_execution_context() failed to get InterpreterBuilder");
+            log::error!("init_execution_context() - failed to get InterpreterBuilder");
             InferenceError::InterpreterBuilderError
         })?;
 
         let mut interpreter = builder.build().map_err(|_| {
-            log::error!("init_execution_context() failed building Interpreter");
+            log::error!("init_execution_context() - failed building Interpreter");
             InferenceError::InterpreterBuildError
         })?;
 
@@ -155,7 +151,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         );
         interpreter.set_num_threads(1);
         interpreter.allocate_tensors().map_err(|_| {
-            log::error!("init_execution_context() Interpreter: tensor allocation failed");
+            log::error!("init_execution_context() - Interpreter: tensor allocation failed");
             InferenceError::TensorAllocationError
         })?;
 
@@ -187,7 +183,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         tensor: &Tensor,
     ) -> InferenceResult<()> {
         log::debug!(
-            "entering set_input() with context: {:?}, index: {}, tensor: {:?}",
+            "entering set_input() - with context: {:?}, index: {}, tensor: {:?}",
             &context,
             index,
             tensor

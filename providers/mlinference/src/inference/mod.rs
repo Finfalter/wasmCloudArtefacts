@@ -43,55 +43,18 @@ impl Default for ExecutionTarget {
     }
 }
 
-// /// InferenceEngine
-// #[async_trait]
-// pub trait InferenceEngine {
-//     async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph> {
-//         Err(InferenceError::RuntimeError)
-//     }
-
-//     async fn init_execution_context(
-//         &self,
-//         graph: Graph,
-//         encoding: &GraphEncoding,
-//     ) -> InferenceResult<GraphExecutionContext> {
-//         Err(InferenceError::RuntimeError)
-//     }
-
-//     async fn set_input(
-//         &self,
-//         context: GraphExecutionContext,
-//         index: u32,
-//         tensor: &Tensor,
-//     ) -> InferenceResult<()> {
-//         Err(InferenceError::RuntimeError)
-//     }
-
-//     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> {
-//         Err(InferenceError::RuntimeError)
-//     }
-
-//     async fn get_output(
-//         &self,
-//         context: GraphExecutionContext,
-//         index: u32,
-//     ) -> InferenceResult<InferenceOutput> {
-//         return Err(InferenceError::RuntimeError)
-//     }
-
-//     async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext) {}
-// }
+impl Default for Box<dyn InferenceEngine + Send + Sync> {
+    fn default() -> Box<dyn InferenceEngine + Send + Sync>
+        where
+        Self: Sized,
+    {
+        Box::new(<TractEngine as Default>::default())
+    }
+}
 
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-    // fn default() -> Box<dyn InferenceEngine + Send + Sync>
-    // where
-    //     Self: Sized,
-    // {
-    //     Box::new(<TractEngine as Default>::default())
-    // }
-
 
     async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph>;
 
@@ -118,6 +81,7 @@ pub trait InferenceEngine {
 
     async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
 }
+
 
 /// InferenceResult
 pub type InferenceResult<T> = Result<T, InferenceError>;

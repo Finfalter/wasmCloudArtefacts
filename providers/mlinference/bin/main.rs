@@ -9,8 +9,8 @@ pub(crate) use wasmcloud_interface_mlinference::{
     InferenceInput, InferenceOutput, MlError, MlInference, MlInferenceReceiver,
 };
 use wasmcloud_provider_mlinference::{
-    get_default_inference_result, load_settings, BindleLoader, Graph, GraphExecutionContext,
-    ModelContext, ModelZoo, InferenceFramework, Engine, GraphEncoding, TractEngine, TfLiteEngine
+    get_default_inference_result, load_settings, BindleLoader, Engine, Graph, GraphEncoding,
+    GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TfLiteEngine, TractEngine,
 };
 
 // main (via provider_main) initializes the threaded tokio executor,
@@ -41,19 +41,19 @@ struct MlInferenceProvider {
     ///   - initialize actor link as soon as we receive the putlink command
     ///   - if health check or rpc is received when not ready, return not-ready error
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
-    
-    /// There are the following relevant types: 
+
+    /// There are the following relevant types:
     ///     - InferenceFramework
     ///     - Engine
     ///     - InferenceEngine
     ///     - GraphEncoding
-    /// 
+    ///
     /// InferenceFramework corresponds to an integrated crate.
     /// An InferenceFramework may support a multitude of Engine
-    /// An InferenceFramework may support a multitude of GraphEncoding. 
+    /// An InferenceFramework may support a multitude of GraphEncoding.
     /// Engine is a wrapper of InferenceEngine
     /// InferenceEngine defines common behavior
-    /// GraphEncoding defines a model's encoding. 
+    /// GraphEncoding defines a model's encoding.
     engines: HashMap<InferenceFramework, Engine>,
 }
 
@@ -83,7 +83,9 @@ impl ProviderHandler for MlInferenceProvider {
         for (_, context) in model_zoo.iter() {
             let engine = match self.get_engine(&context).await {
                 Ok(v) => v,
-                Err(_) => {return;},
+                Err(_) => {
+                    return;
+                }
             };
 
             engine
@@ -96,8 +98,7 @@ impl ProviderHandler for MlInferenceProvider {
 }
 
 impl MlInferenceProvider {
-    async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> 
-    {
+    async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         log::debug!("put_link_sub() - link definition is '{:?}'", ld);
 
         let settings =
@@ -151,14 +152,14 @@ impl MlInferenceProvider {
             let engine = self.get_or_else_set_engine(&context).await?;
 
             let graph: Graph = engine
-                .load(&model_data_bytes, &context.execution_target)
+                .load(&model_data_bytes)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
             context.graph = graph;
 
             let gec: GraphExecutionContext = engine
-                .init_execution_context(context.graph, &context.graph_encoding)
+                .init_execution_context(context.graph, &context.execution_target, &context.graph_encoding)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
@@ -266,24 +267,41 @@ impl MlInferenceProvider {
     /// such that it may be necessary to support multiple engines.
     async fn get_or_else_set_engine(&mut self, context: &ModelContext) -> Result<Engine, RpcError> {
         match context.graph_encoding {
-            GraphEncoding::Onnx | GraphEncoding::Tensorflow =>  
+            GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
                 match self.engines.get(&InferenceFramework::Tract) {
                     Some(e) => Ok(e.clone()),
                     None => {
-                        self.engines.insert(InferenceFramework::Tract, Arc::new(Box::new(TractEngine::default())));
-                        Ok(self.engines.get(&InferenceFramework::Tract).unwrap().clone())
-                    },
-                },
-            GraphEncoding::TfLite =>  
-                match self.engines.get(&InferenceFramework::TfLite) {
-                    Some(e) => Ok(e.clone()),
-                    None => {
-                        self.engines.insert(InferenceFramework::TfLite, Arc::new(Box::new(TfLiteEngine::default())));
-                        Ok(self.engines.get(&InferenceFramework::TfLite).unwrap().clone())
-                    },
-                },
+                        self.engines.insert(
+                            InferenceFramework::Tract,
+                            Arc::new(Box::new(TractEngine::default())),
+                        );
+                        Ok(self
+                            .engines
+                            .get(&InferenceFramework::Tract)
+                            .unwrap()
+                            .clone())
+                    }
+                }
+            }
+            GraphEncoding::TfLite => match self.engines.get(&InferenceFramework::TfLite) {
+                Some(e) => Ok(e.clone()),
+                None => {
+                    self.engines.insert(
+                        InferenceFramework::TfLite,
+                        Arc::new(Box::new(TfLiteEngine::default())),
+                    );
+                    Ok(self
+                        .engines
+                        .get(&InferenceFramework::TfLite)
+                        .unwrap()
+                        .clone())
+                }
+            },
             _ => {
-                log::error!("unsupported graph encoding detected '{:?}'", &context.graph_encoding);
+                log::error!(
+                    "unsupported graph encoding detected '{:?}'",
+                    &context.graph_encoding
+                );
                 Err(RpcError::NotImplemented)
             }
         }
@@ -291,18 +309,25 @@ impl MlInferenceProvider {
 
     async fn get_engine(&self, context: &ModelContext) -> Result<Engine, RpcError> {
         match context.graph_encoding {
-            GraphEncoding::Onnx | GraphEncoding::Tensorflow =>  
+            GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
                 match self.engines.get(&InferenceFramework::Tract) {
                     Some(e) => Ok(e.clone()),
-                    None => Err(RpcError::InvalidParameter("No engine found for graph encoding 'Onnx' or 'Tensorflow'".to_string())),
-                },
-            GraphEncoding::TfLite =>  
-                match self.engines.get(&InferenceFramework::TfLite) {
-                    Some(e) => Ok(e.clone()),
-                    None => Err(RpcError::InvalidParameter("No engine found for graph encoding 'TfLite'".to_string())),
-                },
+                    None => Err(RpcError::InvalidParameter(
+                        "No engine found for graph encoding 'Onnx' or 'Tensorflow'".to_string(),
+                    )),
+                }
+            }
+            GraphEncoding::TfLite => match self.engines.get(&InferenceFramework::TfLite) {
+                Some(e) => Ok(e.clone()),
+                None => Err(RpcError::InvalidParameter(
+                    "No engine found for graph encoding 'TfLite'".to_string(),
+                )),
+            },
             _ => {
-                log::error!("unsupported graph encoding detected '{:?}'", &context.graph_encoding);
+                log::error!(
+                    "unsupported graph encoding detected '{:?}'",
+                    &context.graph_encoding
+                );
                 Err(RpcError::NotImplemented)
             }
         }

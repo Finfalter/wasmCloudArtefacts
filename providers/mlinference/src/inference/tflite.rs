@@ -3,17 +3,17 @@ use crate::inference::{
     InferenceResult,
 };
 use async_trait::async_trait;
-use std::sync::Arc;
 use edgetpu::EdgeTpuContext;
 use std::collections::{btree_map::Keys, BTreeMap};
+use std::sync::Arc;
+use tflite::op_resolver::OpResolver;
+use tflite::ops::builtin::BuiltinOpResolver;
 use tflite::Interpreter;
+use tflite::{FlatBufferModel, InterpreterBuilder};
 use tokio::sync::RwLock;
 use wasmcloud_interface_mlinference::{
     InferenceOutput, Status, Tensor, ValueType, TENSOR_FLAG_ROW_MAJOR,
 };
-use tflite::op_resolver::OpResolver;
-use tflite::ops::builtin::BuiltinOpResolver;
-use tflite::{FlatBufferModel, InterpreterBuilder};
 
 #[derive(Default, Clone)]
 pub struct TfLiteEngine<'a> {
@@ -42,6 +42,7 @@ impl<'a> ModelState<'a, BuiltinOpResolver> {
 pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub graph: Interpreter<'a, BuiltinOpResolver>,
     pub encoding: GraphEncoding,
+    //pub target: ExecutionTarget,
     pub input_tensors: usize,
     pub output_tensors: Option<Vec<Tensor>>,
 }
@@ -60,16 +61,10 @@ impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
 #[async_trait]
 impl<'a> InferenceEngine for TfLiteEngine<'a> {
     /// load
-    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph> {
-        if !matches!(target, &ExecutionTarget::Tpu) {
-            log::error!("TfLiteEngine only supports (edge)TPU");
-            return Err(InferenceError::UnsupportedExecutionTarget);
-        }
+    async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
 
-        log::debug!("load() - target: {:#?}", target);
+        let model_bytes = model.to_vec();
 
-        let model_bytes = builder.to_vec();
-        
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
@@ -93,9 +88,28 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
     async fn init_execution_context(
         &self,
         graph: Graph,
+        target: &ExecutionTarget,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext> {
         log::debug!("init_execution_context() - ENTERING");
+
+        log::debug!(
+            "init_execution_context() - detected execution target: {:?}",
+            target
+        );
+
+        log::debug!(
+            "init_execution_context() - detected encoding: {:?}",
+            encoding
+        );
+
+        if !matches!(target, &ExecutionTarget::Tpu) && !matches!(target, &ExecutionTarget::Cpu) {
+            log::error!(
+                "TfLiteEngine does not support execution target '{:?}'",
+                target
+            );
+            return Err(InferenceError::UnsupportedExecutionTarget);
+        }
 
         let mut state = self.state.write().await;
         let model_bytes = match state.models.get(&graph) {
@@ -127,13 +141,11 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             }
         };
 
-        let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
-            log::error!("init_execution_context() - failed to get edge TPU context");
-            InferenceError::FailedToBuildModelFromBuffer
-        })?;
-
         let resolver = BuiltinOpResolver::default();
-        resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
+
+        if matches!(target, &ExecutionTarget::Tpu) {
+            resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
+        }
 
         let builder = InterpreterBuilder::new(model, resolver).map_err(|_| {
             log::error!("init_execution_context() - failed to get InterpreterBuilder");
@@ -145,20 +157,23 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             InferenceError::InterpreterBuildError
         })?;
 
-        interpreter.set_external_context(
-            tflite::ExternalContextType::EdgeTpu,
-            edgetpu_context.to_external_context(),
-        );
-        interpreter.set_num_threads(1);
+        if matches!(target, &ExecutionTarget::Tpu) {
+            let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
+                log::error!("init_execution_context() - failed to get edge TPU context");
+                InferenceError::FailedToBuildModelFromBuffer
+            })?;
+
+            interpreter.set_external_context(
+                tflite::ExternalContextType::EdgeTpu,
+                edgetpu_context.to_external_context(),
+            );
+            interpreter.set_num_threads(1);
+        }
+        
         interpreter.allocate_tensors().map_err(|_| {
             log::error!("init_execution_context() - Interpreter: tensor allocation failed");
             InferenceError::TensorAllocationError
         })?;
-
-        log::debug!(
-            "init_execution_context() - detected encoding: {:?}",
-            encoding
-        );
 
         let gec = state.key(state.executions.keys());
 
@@ -250,23 +265,19 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         let mut result_tensors: Vec<Tensor> = Vec::new();
 
-        for &output in output_tensors 
-        {
+        for &output in output_tensors {
             let mut results = Vec::new();
-            let tensor_info = interpreter.tensor_info(output)
-                .ok_or_else(|| {
-                    log::error!("compute() - info for output tensor could not be evaluated");
-                    return InferenceError::RuntimeError;
-                })?;
+            let tensor_info = interpreter.tensor_info(output).ok_or_else(|| {
+                log::error!("compute() - info for output tensor could not be evaluated");
+                return InferenceError::RuntimeError;
+            })?;
 
             match tensor_info.element_kind {
                 tflite::context::ElementKind::kTfLiteUInt8 => {
-                    let out_tensor: &[u8] =
-                        interpreter.tensor_data(output)
-                            .map_err(|_| {
-                                log::error!("compute() - failed to get output tensor");
-                                InferenceError::FailedToBuildModelFromBuffer
-                            })?;
+                    let out_tensor: &[u8] = interpreter.tensor_data(output).map_err(|_| {
+                        log::error!("compute() - failed to get output tensor");
+                        InferenceError::FailedToBuildModelFromBuffer
+                    })?;
                     let scale = tensor_info.params.scale;
                     let zero_point = tensor_info.params.zero_point;
                     results = out_tensor
@@ -275,12 +286,10 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
                         .collect();
                 }
                 tflite::context::ElementKind::kTfLiteFloat32 => {
-                    let out_tensor: &[f32] =
-                        interpreter.tensor_data(output)
-                            .map_err(|_| {
-                                log::error!("compute() - failed to get output tensor");
-                                InferenceError::FailedToBuildModelFromBuffer
-                            })?;
+                    let out_tensor: &[f32] = interpreter.tensor_data(output).map_err(|_| {
+                        log::error!("compute() - failed to get output tensor");
+                        InferenceError::FailedToBuildModelFromBuffer
+                    })?;
                     results = out_tensor.into_iter().copied().collect();
                 }
                 _ => eprintln!(

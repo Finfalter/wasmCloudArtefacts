@@ -68,10 +68,9 @@ impl ModelState {
 #[async_trait]
 impl InferenceEngine for TractEngine {
     /// load
-    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph> {
-        log::debug!("load() - target: {:#?}", target);
+    async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
 
-        let model_bytes = builder.to_vec();
+        let model_bytes = model.to_vec();
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
@@ -92,12 +91,32 @@ impl InferenceEngine for TractEngine {
     }
 
     /// init_execution_context
-    async fn init_execution_context(
+    async fn 
+    init_execution_context(
         &self,
         graph: Graph,
+        target: &ExecutionTarget,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext> {
         log::debug!("init_execution_context() - ENTERING");
+
+        log::debug!(
+            "init_execution_context() - detected execution target: {:?}",
+            target
+        );
+
+        log::debug!(
+            "init_execution_context() - detected encoding: {:?}",
+            encoding
+        );
+
+        if !matches!(target, &ExecutionTarget::Cpu) {
+            log::error!(
+                "This framework does not support execution target '{:?}'",
+                target
+            );
+            return Err(InferenceError::UnsupportedExecutionTarget);
+        }
 
         let mut state = self.state.write().await;
         let mut model_bytes = match state.models.get(&graph) {
@@ -126,11 +145,6 @@ impl InferenceEngine for TractEngine {
                 return Err(InferenceError::InvalidEncodingError);
             }
         };
-
-        log::debug!(
-            "init_execution_context() - detected encoding: {:?}",
-            encoding
-        );
 
         let gec = state.key(state.executions.keys());
 

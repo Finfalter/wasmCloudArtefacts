@@ -1,0 +1,3 @@
+model_identifier,parcel,MIME_type
+mobilenetv2_uint8_quant/0.1.0,../models/mobilenetv2_uint8_quant.json,application/json
+mobilenetv2_uint8_quant/0.1.0,../models/mobilenetv2_uint8_quant.tflite,application/octet-stream

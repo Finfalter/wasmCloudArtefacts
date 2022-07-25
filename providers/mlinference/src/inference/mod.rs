@@ -45,7 +45,7 @@ impl Default for ExecutionTarget {
 
 impl Default for Box<dyn InferenceEngine + Send + Sync> {
     fn default() -> Box<dyn InferenceEngine + Send + Sync>
-        where
+    where
         Self: Sized,
     {
         Box::new(<TractEngine as Default>::default())
@@ -55,12 +55,15 @@ impl Default for Box<dyn InferenceEngine + Send + Sync> {
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-
-    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph>;
+    async fn load(
+        &self, 
+        model: &[u8], 
+    ) -> InferenceResult<Graph>;
 
     async fn init_execution_context(
         &self,
         graph: Graph,
+        target: &ExecutionTarget,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext>;
 
@@ -79,9 +82,11 @@ pub trait InferenceEngine {
         index: u32,
     ) -> InferenceResult<InferenceOutput>;
 
-    async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
+    async fn drop_model_state(
+        &self, 
+        graph: &Graph, 
+        gec: &GraphExecutionContext);
 }
-
 
 /// InferenceResult
 pub type InferenceResult<T> = Result<T, InferenceError>;

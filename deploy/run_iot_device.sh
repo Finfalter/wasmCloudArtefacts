@@ -258,7 +258,7 @@ start_providers() {
     local _host_id=$(host_id)
 
     # make sure inference provider is built
-    #make -C ${_DIR}/../providers/mlinference all
+    make -C ${_DIR}/../providers/mlinference all
 
     echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000

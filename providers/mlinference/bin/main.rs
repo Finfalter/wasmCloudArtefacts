@@ -269,12 +269,16 @@ impl MlInferenceProvider {
         match context.graph_encoding {
             GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
                 match self.engines.get(&InferenceFramework::Tract) {
-                    Some(e) => Ok(e.clone()),
+                    Some(e) => {
+                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected.");
+                        Ok(e.clone())
+                    },
                     None => {
                         self.engines.insert(
                             InferenceFramework::Tract,
                             Arc::new(Box::new(TractEngine::default())),
                         );
+                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created.");
                         Ok(self
                             .engines
                             .get(&InferenceFramework::Tract)
@@ -284,12 +288,16 @@ impl MlInferenceProvider {
                 }
             }
             GraphEncoding::TfLite => match self.engines.get(&InferenceFramework::TfLite) {
-                Some(e) => Ok(e.clone()),
+                Some(e) => {
+                    log::debug!("get_or_else_set_engine() - previously created TfLite engine selected.");
+                    Ok(e.clone())
+                },
                 None => {
                     self.engines.insert(
                         InferenceFramework::TfLite,
                         Arc::new(Box::new(TfLiteEngine::default())),
                     );
+                    log::debug!("get_or_else_set_engine() - TfLite engine selected and created.");
                     Ok(self
                         .engines
                         .get(&InferenceFramework::TfLite)

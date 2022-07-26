@@ -27,8 +27,8 @@ label.size = 18652
 conditions.memberOf = ["model"]
 
 [[parcel]]
-label.sha256 = '097b6970840a8f1fe3306935e5461039ae95ea695e8857eb94b321f95d2a194f'
+label.sha256 = 'a1581c7767c1f94e9434b7c79350a8afb36a2e7493daf913a7a2f3ac9d1546e3'
 label.mediaType = 'application/json'
 label.name = 'mobilenetv1_uint8_quant.json'
-label.size = 195
+label.size = 196
 conditions.memberOf = ["metadata"]

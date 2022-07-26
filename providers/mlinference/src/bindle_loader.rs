@@ -128,7 +128,6 @@ impl BindleLoader {
     }
 
     /// get first member of
-    //fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> BindleResult<&bindle::Parcel> {
     fn get_first_member_of<'a>(
         parcels: &'a [bindle::Parcel],
         group: &'a str,

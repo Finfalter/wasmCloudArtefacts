@@ -58,6 +58,31 @@ impl HttpServer for InferenceapiActor {
                 }
             }
 
+            ("PUT", [model_name]) => {
+                debug!("receiving PUT(model) ..");
+
+                // extract
+                let tensor: Tensor = deser(&req.body).map_err(|error| {
+                    log::error!("failed to deserialize the input tensor from POST body!");
+                    RpcError::Deser(format!("{}", error))
+                })?;
+
+                // validate
+                validate(model_name, &tensor).await?;
+
+                // predict
+                let prediction: InferenceOutput = predict(ctx, model_name, tensor).await?;
+
+                if let Status::Error(e) = prediction.result {
+                    Ok(HttpResponse::internal_server_error(format!(
+                        "compute_output: {:?}",
+                        e
+                    )))
+                } else {
+                    HttpResponse::json(prediction, 200)
+                }
+            }
+
             ("PUT", [model_name, "preprocess"]) => {
                 debug!("receiving POST(model, preprocess) ..");
 

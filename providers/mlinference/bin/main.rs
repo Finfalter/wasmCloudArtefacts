@@ -54,7 +54,7 @@ struct MlInferenceProvider {
     /// Engine is a wrapper of InferenceEngine
     /// InferenceEngine defines common behavior
     /// GraphEncoding defines a model's encoding.
-    engines: HashMap<InferenceFramework, Engine>,
+    engines: Arc<RwLock<HashMap<InferenceFramework, Engine>>>,
 }
 
 /// use default implementations of provider message handlers
@@ -98,7 +98,8 @@ impl ProviderHandler for MlInferenceProvider {
 }
 
 impl MlInferenceProvider {
-    async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> {
+    async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> 
+    {
         log::debug!("put_link_sub() - link definition is '{:?}'", ld);
 
         let settings =
@@ -265,41 +266,64 @@ impl MlInference for MlInferenceProvider {
 impl MlInferenceProvider {
     /// Each link definition may address a different target
     /// such that it may be necessary to support multiple engines.
-    async fn get_or_else_set_engine(&mut self, context: &ModelContext) -> Result<Engine, RpcError> {
+    async fn get_or_else_set_engine(&mut self, context: &ModelContext) -> Result<Engine, RpcError> 
+    {
+        let mut engines_lock = self.engines.write().await;
+        
         match context.graph_encoding {
             GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
-                match self.engines.get(&InferenceFramework::Tract) {
+                match engines_lock.get(&InferenceFramework::Tract) {
                     Some(e) => {
-                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected.");
+                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected for '{}'.", context.bindle_url);
                         Ok(e.clone())
                     },
                     None => {
-                        self.engines.insert(
+                        let feedback = engines_lock.insert(
                             InferenceFramework::Tract,
                             Arc::new(Box::new(TractEngine::default())),
                         );
-                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created.");
-                        Ok(self
-                            .engines
+                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created for '{}'.", context.bindle_url);
+                        
+                        if feedback.is_none() {
+                            log::debug!("get_or_else_set_engine() - Onnx/Tensorflow was definitely created");
+                        } 
+                        else {
+                            log::debug!("get_or_else_set_engine() - Onnx/Tensorflow was NOT created!");
+                        }
+
+                        log::debug!("get_or_else_set_engine() - content of Engines: {:?}: with length {:?}", &engines_lock.keys(), &engines_lock.keys().len());
+
+                        //assert_eq!(engines_lock.is_empty(), false);
+
+                        Ok(engines_lock
                             .get(&InferenceFramework::Tract)
                             .unwrap()
                             .clone())
                     }
                 }
             }
-            GraphEncoding::TfLite => match self.engines.get(&InferenceFramework::TfLite) {
+            GraphEncoding::TfLite => match engines_lock.get(&InferenceFramework::TfLite) {
                 Some(e) => {
-                    log::debug!("get_or_else_set_engine() - previously created TfLite engine selected.");
+                    log::debug!("get_or_else_set_engine() - previously created TfLite engine selected for '{}'.", context.bindle_url);
                     Ok(e.clone())
                 },
                 None => {
-                    self.engines.insert(
+                    let feedback = engines_lock.insert(
                         InferenceFramework::TfLite,
                         Arc::new(Box::new(TfLiteEngine::default())),
                     );
-                    log::debug!("get_or_else_set_engine() - TfLite engine selected and created.");
-                    Ok(self
-                        .engines
+                    log::debug!("get_or_else_set_engine() - TfLite engine selected and created for '{}'.", context.bindle_url);
+
+                    if feedback.is_none() {
+                        log::debug!("get_or_else_set_engine() - TfLite engine was definitely created");
+                    } 
+                    else {
+                        log::debug!("get_or_else_set_engine() - TfLite was NOT created!");
+                    }
+
+                    log::debug!("get_or_else_set_engine() - content of Engines: {:?}: with length {:?}", &engines_lock.keys(), &engines_lock.keys().len());
+
+                    Ok(engines_lock
                         .get(&InferenceFramework::TfLite)
                         .unwrap()
                         .clone())
@@ -315,25 +339,35 @@ impl MlInferenceProvider {
         }
     }
 
-    async fn get_engine(&self, context: &ModelContext) -> Result<Engine, RpcError> {
+    async fn get_engine(&self, context: &ModelContext) -> Result<Engine, RpcError> 
+    {
+        let engines_lock = self.engines.write().await;
+
+        log::debug!("get_engine() - context: {:?}", &context);
+        log::debug!("get_engine() -  what is inside:");
+        log::debug!("get_engine() - content of Engines: {:?}: with length {:?}", &engines_lock.keys(), &engines_lock.keys().len());
+        log::debug!("get_engine() - insider report DONE!");
+
+        //assert_eq!(engines_lock.is_empty(), false);
+
         match context.graph_encoding {
             GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
-                match self.engines.get(&InferenceFramework::Tract) {
+                match engines_lock.get(&InferenceFramework::Tract) {
                     Some(e) => Ok(e.clone()),
                     None => Err(RpcError::InvalidParameter(
-                        "No engine found for graph encoding 'Onnx' or 'Tensorflow'".to_string(),
+                        "get_engine() - No engine found for graph encoding 'Onnx' or 'Tensorflow'".to_string(),
                     )),
                 }
             }
-            GraphEncoding::TfLite => match self.engines.get(&InferenceFramework::TfLite) {
+            GraphEncoding::TfLite => match engines_lock.get(&InferenceFramework::TfLite) {
                 Some(e) => Ok(e.clone()),
                 None => Err(RpcError::InvalidParameter(
-                    "No engine found for graph encoding 'TfLite'".to_string(),
+                    "get_engine() - No engine found for graph encoding 'TfLite'".to_string(),
                 )),
             },
             _ => {
                 log::error!(
-                    "unsupported graph encoding detected '{:?}'",
+                    "get_engine() - unsupported graph encoding detected '{:?}'",
                     &context.graph_encoding
                 );
                 Err(RpcError::NotImplemented)

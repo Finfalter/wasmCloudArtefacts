@@ -23,33 +23,6 @@ pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
     Ok(byte_array)
 }
 
-// pub trait NdArrayTensor<S, T, D> {
-//     /// https://en.wikipedia.org/wiki/Softmax_function)
-//     fn softmax(&self, axis: ndarray::Axis) -> Array<T, D>
-//     where
-//         D: ndarray::RemoveAxis,
-//         S: ndarray::RawData + ndarray::Data + ndarray::RawData<Elem = T>,
-//         <S as ndarray::RawData>::Elem: std::clone::Clone,
-//         T: ndarray::NdFloat + std::ops::SubAssign + std::ops::DivAssign;
-// }
-
-// impl<S, T, D> NdArrayTensor<S, T, D> for ArrayBase<S, D>
-// where
-//     D: ndarray::RemoveAxis,
-//     S: ndarray::RawData + ndarray::Data + ndarray::RawData<Elem = T>,
-//     <S as ndarray::RawData>::Elem: std::clone::Clone,
-//     T: ndarray::NdFloat + std::ops::SubAssign + std::ops::DivAssign,
-// {
-//     fn softmax(&self, axis: ndarray::Axis) -> Array<T, D> {
-//         let mut new_array: Array<T, D> = self.to_owned();
-//         new_array.map_inplace(|v| *v = v.exp());
-//         let sum = new_array.sum_axis(axis).insert_axis(axis);
-//         new_array /= &sum;
-
-//         new_array
-//     }
-// }
-
 pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
     log::debug!("preprocess() - HERE");
 

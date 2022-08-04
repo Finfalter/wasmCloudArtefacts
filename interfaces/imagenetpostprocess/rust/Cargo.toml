@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 async-trait = "0.1"
 serde = { version = "1.0" , features = ["derive"] }
 serde_bytes = "0.11.5"
-wasmbus-rpc = "0.8.2"
+wasmbus-rpc = "0.9"
 #wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
 wasmcloud_interface_mlinference = "0.2"
 

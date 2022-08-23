@@ -24,7 +24,7 @@ pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
 }
 
 pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
-    log::debug!("preprocess() - HERE");
+    log::debug!("preprocess() - entry point");
 
     let raw_image = load_from_memory(raw_data).map_err(|e| RpcError::Deser(e.to_string()))?;
 
@@ -35,7 +35,7 @@ pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<V
         ::image::imageops::FilterType::Triangle,
     );
 
-    println!("resized image: {:#?}", image.dimensions());
+    log::debug!("resized image: {:#?}", image.dimensions());
 
     let mut array = ndarray::Array::from_shape_fn((1, 3, 224, 224), |(_, c, j, i)| {
         let pixel = image.get_pixel(i as u32, j as u32);

@@ -1,4 +1,4 @@
-subdirs = ../actors/inferenceapi ../actors/imagepreprocessor ../actors/imagenetpostprocessor
+subdirs = ../actors/inferenceapi ../actors/imagenetpreprocessor ../actors/imagenetpostprocessor ../actors/mnistpreprocessor ../actors/mnistpostprocessor
 top_targets = all push start test clean
 
 include ../build/makefiles/common.mk

@@ -1,6 +1,5 @@
 //! mlinference capability provider
 //!
-
 use bindle::client::{tokens::NoToken, Client};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;

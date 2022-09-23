@@ -66,7 +66,7 @@ impl HttpServer for InferenceapiActor {
 
                 // extract
                 let tensor: Tensor = deser(&req.body).map_err(|error| {
-                    log::error!("failed to deserialize the input tensor from POST body!");
+                    log::error!("failed to deserialize the input tensor from PUT body!");
                     RpcError::Deser(format!("{}", error))
                 })?;
 

@@ -103,6 +103,8 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             encoding
         );
 
+        log::debug!("init_execution_context() - TEST ZERO");
+
         if !matches!(target, &ExecutionTarget::Tpu) && !matches!(target, &ExecutionTarget::Cpu) {
             log::error!(
                 "TfLiteEngine does not support execution target '{:?}'",
@@ -110,6 +112,8 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             );
             return Err(InferenceError::UnsupportedExecutionTarget);
         }
+
+        log::debug!("init_execution_context() - TEST ONE");
 
         let mut state = self.state.write().await;
         let model_bytes = match state.models.get(&graph) {
@@ -122,6 +126,8 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
                 return Err(InferenceError::RuntimeError);
             }
         };
+
+        log::debug!("init_execution_context() - TEST TWO");
 
         let model: FlatBufferModel = match encoding {
             GraphEncoding::TfLite => FlatBufferModel::build_from_buffer(model_bytes.to_vec())
@@ -141,7 +147,11 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             }
         };
 
+        log::debug!("init_execution_context() - TEST THREE");
+
         let resolver = BuiltinOpResolver::default();
+
+        log::debug!("init_execution_context() - BEFORE FIRST edgeTPU stuff");
 
         if matches!(target, &ExecutionTarget::Tpu) {
             resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
@@ -157,6 +167,8 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             InferenceError::InterpreterBuildError
         })?;
 
+        log::debug!("init_execution_context() - BEFORE SECOND edgeTPU stuff");
+
         if matches!(target, &ExecutionTarget::Tpu) {
             let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
                 log::error!("init_execution_context() - failed to get edge TPU context");
@@ -170,10 +182,14 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             interpreter.set_num_threads(1);
         }
         
+        log::debug!("init_execution_context() - BEFORE tensor allocation");
+
         interpreter.allocate_tensors().map_err(|_| {
             log::error!("init_execution_context() - Interpreter: tensor allocation failed");
             InferenceError::TensorAllocationError
         })?;
+
+        log::debug!("init_execution_context() - AFTER allocate_tensors() stuff");
 
         let gec = state.key(state.executions.keys());
 
@@ -186,6 +202,8 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             gec,
             TfLiteSession::with_graph(interpreter, encoding.to_owned()),
         );
+
+        log::debug!("init_execution_context() - PASSED");
 
         Ok(gec)
     }

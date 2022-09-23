@@ -17,6 +17,8 @@ use wasmcloud_provider_mlinference::{
 // and returns only when it receives a shutdown message
 //
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_log::LogTracer::init()?;
+
     provider_main(MlInferenceProvider::default(), Some("mlinference".to_string()))?;
 
     if std::env::var("BINDLE_URL").is_err() {

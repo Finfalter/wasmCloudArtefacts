@@ -11,3 +11,4 @@ source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv2-7.toml ${_DIR}/../mo
 source ${_DIR}/push_bindle.sh ${_DIR}/../models/squeezenetv1-1-7.toml ${_DIR}/../models/squeezenetv1-1-7.csv
 source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv1_uint8_quant.toml ${_DIR}/../models/mobilenetv1_uint8_quant.csv
 source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv2_uint8_quant.toml ${_DIR}/../models/mobilenetv2_uint8_quant.csv
+source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv1_quant_edgetpu.toml ${_DIR}/../models/mobilenetv1_quant_edgetpu.csv

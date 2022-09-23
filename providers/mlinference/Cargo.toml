@@ -17,13 +17,14 @@ serde_json = "1.0"
 thiserror  = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
+tracing-log = "0.1"
 tract-data = "0.17"
 tract-linalg = "0.17"
 tract-onnx = { version = "0.17" }
 tract-tensorflow = "0.17"
 wasmbus-rpc = "0.10"
-edgetpu = { git = "https://github.com/ionosnetworks/edgetpu-rs" }
-tflite = { git = "https://github.com/ionosnetworks/tflite-rs", rev = "abcaeab" }
+edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs" }
+tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "e6eecd4" }
 
 # wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
 wasmcloud_interface_mlinference = "0.3"

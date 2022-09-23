@@ -1,0 +1,3 @@
+model_identifier,parcel,MIME_type
+mobilenetv1_quant_edgetpu/0.1.0,../models/mobilenetv1_quant_edgetpu.json,application/json
+mobilenetv1_quant_edgetpu/0.1.0,../models/mobilenetv1_quant_edgetpu.tflite,application/octet-stream

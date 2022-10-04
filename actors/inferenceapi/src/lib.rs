@@ -152,7 +152,7 @@ impl HttpServer for InferenceapiActor {
             }
 
             ("PUT", [model_name, "mnist", "matches"]) => {
-                debug!("receiving POST(model, classes) ..");
+                debug!("receiving PUT(model, classes) ..");
 
                 // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(MNIST_PREPROCESS_ACTOR)

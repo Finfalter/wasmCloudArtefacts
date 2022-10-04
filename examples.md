@@ -19,7 +19,9 @@ curl -v POST 0.0.0.0:8078/squeezenetv117/preprocess --data-binary @../providers/
 curl -v POST 0.0.0.0:8078/squeezenetv117/matches --data-binary @../providers/mlinference/tests/testdata/images/n04350905.jpg
 
 curl --silent -T ../images/cat.jpg 192.168.178.134:8078/mobilenetv27/matches | jq
+
 curl --silent -T ../images/cat.jpg localhost:8078/mobilenetv27/matches | jq
 curl --silent -T ../images/cat.jpg localhost:8078/mobilenetv27/matches | jq
 curl --silent -T ../images/4.png localhost:8078/mnistv1/mnist/matches | jq
 curl --silent -T ../images/cat_edgetpu.bmp localhost:8078/mobilenetv1tpu | jq
+curl --silent -T ../images/cat_edgetpu.bmp localhost:8078/mobilenetv1tpu/matches | jq

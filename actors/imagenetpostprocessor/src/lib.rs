@@ -26,10 +26,18 @@ impl Imagenet for ImagenetpostprocessorActor {
 
         let raw_result_f32 = bytes_to_f32_vec(tensor.data).unwrap();
 
-        let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
+        let output_tensor = Array::from_shape_vec((1, 1001, 1, 1), raw_result_f32).unwrap();
+        //let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
+
+        // let mut probabilities: Vec<(usize, f32)> = output_tensor
+        //     .softmax(ndarray::Axis(1))
+        //     .into_iter()
+        //     .enumerate()
+        //     .collect::<Vec<_>>();
+
+        // probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         let mut probabilities: Vec<(usize, f32)> = output_tensor
-            .softmax(ndarray::Axis(1))
             .into_iter()
             .enumerate()
             .collect::<Vec<_>>();
@@ -41,12 +49,12 @@ impl Imagenet for ImagenetpostprocessorActor {
         let mut matches: Vec<Classification> = Vec::new();
 
         for i in 0..5 {
-            let clfn = Classification {
+            let classification = Classification {
                 label: labels[probabilities[i].0].clone(),
                 probability: probabilities[i].1,
             };
 
-            matches.push(clfn);
+            matches.push(classification);
         }
 
         Ok(matches)

@@ -31,7 +31,7 @@ impl MlPreprocessing for MNistpreprocessorActor {
 
         let t = Tensor {
             value_types: vec![ValueType::ValueF32],
-            dimensions: vec![1, 1, 28, 28],
+            dimensions: vec![1, 1, 224, 224],
             data: convert,
             flags: 0,
         };

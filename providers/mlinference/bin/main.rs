@@ -238,6 +238,9 @@ impl MlInference for MlInferenceProvider {
                     e.to_string(),
                 )));
             }
+            
+            log::debug!("main.rs - GOT AS FAR");
+
             if let Err(e) = engine.compute(model_context.graph_execution_context).await {
                 log::error!("predict() - GraphExecutionContext not found: {}", e);
                 return get_default_inference_result(Some(MlError::ContextNotFoundError(

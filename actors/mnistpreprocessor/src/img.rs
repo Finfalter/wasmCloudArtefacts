@@ -1,7 +1,5 @@
 use image::{load_from_memory};
-//use ndarray::s;
 use wasmbus_rpc::actor::prelude::*;
-//use wasmcloud_interface_logging::debug;
 
 pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
     log::debug!("preprocess() - entry point");
@@ -19,6 +17,5 @@ pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<V
 
     log::debug!("resized image: {:#?}", image.dimensions());
 
-    // __CB__TODO
     Ok(raw_image.into_bytes())
 }

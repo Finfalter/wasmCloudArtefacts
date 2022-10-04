@@ -315,6 +315,9 @@ check_files() {
 
 run_all() {
 
+    # to be removed
+    docker container stop registry
+
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
 

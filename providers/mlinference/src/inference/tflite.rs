@@ -17,16 +17,19 @@ use wasmcloud_interface_mlinference::{
 
 #[derive(Default, Clone)]
 pub struct TfLiteEngine<'a> {
-    state: Arc<RwLock<ModelState<'a, BuiltinOpResolver>>>,
+    //state: Arc<RwLock<ModelState<'a, BuiltinOpResolver>>>,
+    state: Arc<RwLock<ModelState<'a>>>,
 }
 
 #[derive(Default)]
-pub struct ModelState<'a, BuiltinOpResolver: OpResolver> {
+//pub struct ModelState<'a, BuiltinOpResolver: OpResolver> {
+pub struct ModelState<'a> {
     executions: BTreeMap<GraphExecutionContext, TfLiteSession<'a, BuiltinOpResolver>>,
     models: BTreeMap<Graph, Vec<u8>>,
 }
 
-impl<'a> ModelState<'a, BuiltinOpResolver> {
+//impl<'a> ModelState<'a, BuiltinOpResolver> {
+impl<'a> ModelState<'a> {
     /// Helper function that returns the key that is supposed to be inserted next.
     pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
         match keys.last() {
@@ -42,16 +45,21 @@ impl<'a> ModelState<'a, BuiltinOpResolver> {
 pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub graph: Interpreter<'a, BuiltinOpResolver>,
     pub encoding: GraphEncoding,
-    //pub target: ExecutionTarget,
+    pub tpu_context: edgetpu::EdgeTpuContext,
     pub input_tensors: usize,
     pub output_tensors: Option<Vec<Tensor>>,
 }
 
 impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
-    pub fn with_graph(graph: Interpreter<'a, BuiltinOpResolver>, encoding: GraphEncoding) -> Self {
+    pub fn with_graph(
+        graph: Interpreter<'a, BuiltinOpResolver>, 
+        encoding: GraphEncoding, 
+        tpu_context: edgetpu::EdgeTpuContext,
+    ) -> Self {
         Self {
             graph,
             encoding,
+            tpu_context,
             input_tensors: 0,
             output_tensors: None,
         }
@@ -153,9 +161,16 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         log::debug!("init_execution_context() - BEFORE FIRST edgeTPU stuff");
 
-        if matches!(target, &ExecutionTarget::Tpu) {
+        // if matches!(target, &ExecutionTarget::Tpu) {
+            // let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
+            //     log::error!("init_execution_context() - failed to get edge TPU context");
+            //     InferenceError::FailedToBuildModelFromBuffer
+            // })?;
+        // }
+
+        //if matches!(target, &ExecutionTarget::Tpu) {
             resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
-        }
+        //}
 
         let builder = InterpreterBuilder::new(model, resolver).map_err(|_| {
             log::error!("init_execution_context() - failed to get InterpreterBuilder");
@@ -167,22 +182,26 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             InferenceError::InterpreterBuildError
         })?;
 
-        log::debug!("init_execution_context() - BEFORE SECOND edgeTPU stuff");
+        //if matches!(target, &ExecutionTarget::Tpu) {
 
-        if matches!(target, &ExecutionTarget::Tpu) {
+            log::debug!("init_execution_context() - before open_device()");
+
             let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
                 log::error!("init_execution_context() - failed to get edge TPU context");
                 InferenceError::FailedToBuildModelFromBuffer
             })?;
 
+            log::debug!("init_execution_context() - before set_external_context()");    
             interpreter.set_external_context(
                 tflite::ExternalContextType::EdgeTpu,
                 edgetpu_context.to_external_context(),
             );
+
+            log::debug!("init_execution_context() - before set_num_threads()");    
             interpreter.set_num_threads(1);
-        }
+        //}
         
-        log::debug!("init_execution_context() - BEFORE tensor allocation");
+        log::debug!("init_execution_context() - before allocate_tensors()");
 
         interpreter.allocate_tensors().map_err(|_| {
             log::error!("init_execution_context() - Interpreter: tensor allocation failed");
@@ -198,10 +217,20 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             gec
         );
 
+        log::debug!("init_execution_context() - Interpreter is at: {:p}", &interpreter);
+        log::debug!("init_execution_context() - edge_tpu    is at: {:p}", &edgetpu_context);
+
         state.executions.insert(
             gec,
-            TfLiteSession::with_graph(interpreter, encoding.to_owned()),
+            TfLiteSession::with_graph(
+                interpreter, 
+                encoding.to_owned(), 
+                edgetpu_context,
+            )
         );
+
+        // log::debug!("init_execution_context() - Interpreter is at: {:p}", &interpreter);
+        // log::debug!("init_execution_context() - edge_tpu    is at: {:p}", &edgetpu_context);
 
         log::debug!("init_execution_context() - PASSED");
 
@@ -244,17 +273,23 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             execution.graph.tensor_info(tensor_index).unwrap().dims,
         );
 
+        log::debug!("set_input() - BEFORE copy_from_slice()");
+
         execution
             .graph
             .tensor_data_mut(tensor_index)
             .unwrap()
             .copy_from_slice(tensor.data.as_slice());
 
+        log::debug!("set_input() - passed");
+
         Ok(())
     }
 
     /// compute()
     async fn compute(&self, context: GraphExecutionContext) -> InferenceResult<()> {
+        log::debug!("compute() - entering");
+
         let mut state = self.state.write().await;
         let execution = match state.executions.get_mut(&context) {
             Some(s) => s,
@@ -268,11 +303,19 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
         };
 
         let interpreter = &mut execution.graph;
+        log::debug!("compute() - Interpreter is at: {:p}", &interpreter);
+
+        let edgetpu_context = &mut execution.tpu_context;
+        log::debug!("compute() - edge_tpu    is at: {:p}", edgetpu_context );
+        
+        log::debug!("compute() - before interpreter.invoke()");
 
         interpreter.invoke().map_err(|_| {
             log::error!("init_execution_context() - interpreter invokation failed");
             InferenceError::InterpreterInvocationError
         })?;
+
+        log::debug!("compute() - after interpreter.invoke()");
 
         let output_tensors = interpreter.outputs();
 
@@ -394,7 +437,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
     log::debug!(
-        "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",
+        "f32_vec_to_bytes() - flattened output tensor contains {} elements with sum {}",
         data.len(),
         sum
     );
@@ -402,7 +445,7 @@ pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let result: Vec<u8> = chunks.iter().flatten().copied().collect();
 
     log::debug!(
-        "f32_vec_to_bytes() - flatten byte output tensor contains {} elements",
+        "f32_vec_to_bytes() - flattened byte output tensor contains {} elements",
         result.len()
     );
     result

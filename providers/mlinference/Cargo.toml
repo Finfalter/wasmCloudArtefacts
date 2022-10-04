@@ -7,7 +7,7 @@ resolver = "2"
 [dependencies]
 async-trait = "0.1"
 base64 = "0.13"
-bindle = "0.8.0"
+bindle = "0.8.1"
 byteorder = "1.4"
 log = "0.4"
 ndarray = "0.15"
@@ -23,8 +23,8 @@ tract-linalg = "0.17"
 tract-onnx = { version = "0.17" }
 tract-tensorflow = "0.17"
 wasmbus-rpc = "0.10"
-edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs" }
-tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "e6eecd4" }
+edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c" }
+tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15" }
 
 # wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
 wasmcloud_interface_mlinference = "0.3"

@@ -192,7 +192,7 @@ impl InferenceEngine for TractEngine {
             InferenceFact::dt_shape(f32::datum_type(), shape.clone()),
         )?;
 
-        let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
+        let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec()).await?;
         let input: TractTensor = Array::from_shape_vec(shape, data)?.into();
 
         match execution.input_tensors {
@@ -321,7 +321,7 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
+        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec()).await;
 
         let io = InferenceOutput {
             result: Status::Success,
@@ -351,7 +351,7 @@ impl InferenceEngine for TractEngine {
 
 pub type Result<T> = std::io::Result<T>;
 
-pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+pub async fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     data.chunks(4)
         .into_iter()
         .map(|c| {
@@ -361,7 +361,7 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
         .collect()
 }
 
-pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+pub async fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
     log::debug!(
         "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",

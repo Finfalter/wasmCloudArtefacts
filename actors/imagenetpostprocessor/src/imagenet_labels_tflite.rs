@@ -1,4 +1,4 @@
-pub const IMAGENT_CLASSES: &str = 
+pub const IMAGENT_LABELS_TFLITE: &str = 
 "0  background
 1  tench, Tinca tinca
 2  goldfish, Carassius auratus

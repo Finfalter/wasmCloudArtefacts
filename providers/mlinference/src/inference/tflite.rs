@@ -45,21 +45,21 @@ impl<'a> ModelState<'a> {
 pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub graph: Interpreter<'a, BuiltinOpResolver>,
     pub encoding: GraphEncoding,
-    pub tpu_context: edgetpu::EdgeTpuContext,
     pub input_tensors: usize,
     pub output_tensors: Option<Vec<Tensor>>,
+    pub edgetpu_context: Option<edgetpu::EdgeTpuContext>,
 }
 
 impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
     pub fn with_graph(
         graph: Interpreter<'a, BuiltinOpResolver>, 
         encoding: GraphEncoding, 
-        tpu_context: edgetpu::EdgeTpuContext,
+        edgetpu_context: Option<edgetpu::EdgeTpuContext>,
     ) -> Self {
         Self {
             graph,
             encoding,
-            tpu_context,
+            edgetpu_context,
             input_tensors: 0,
             output_tensors: None,
         }
@@ -161,16 +161,9 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         log::debug!("init_execution_context() - BEFORE FIRST edgeTPU stuff");
 
-        // if matches!(target, &ExecutionTarget::Tpu) {
-            // let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
-            //     log::error!("init_execution_context() - failed to get edge TPU context");
-            //     InferenceError::FailedToBuildModelFromBuffer
-            // })?;
-        // }
-
-        //if matches!(target, &ExecutionTarget::Tpu) {
+        if matches!(target, &ExecutionTarget::Tpu) {
             resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
-        //}
+        }
 
         let builder = InterpreterBuilder::new(model, resolver).map_err(|_| {
             log::error!("init_execution_context() - failed to get InterpreterBuilder");
@@ -182,24 +175,27 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             InferenceError::InterpreterBuildError
         })?;
 
-        //if matches!(target, &ExecutionTarget::Tpu) {
+        let mut edgetpu_context = None;
+
+        if matches!(target, &ExecutionTarget::Tpu) {
 
             log::debug!("init_execution_context() - before open_device()");
 
-            let edgetpu_context = EdgeTpuContext::open_device().map_err(|_| {
+            edgetpu_context = Some(EdgeTpuContext::open_device().map_err(|_| {
                 log::error!("init_execution_context() - failed to get edge TPU context");
                 InferenceError::FailedToBuildModelFromBuffer
-            })?;
+            })?);
 
             log::debug!("init_execution_context() - before set_external_context()");    
             interpreter.set_external_context(
                 tflite::ExternalContextType::EdgeTpu,
-                edgetpu_context.to_external_context(),
+                // https://users.rust-lang.org/t/calling-method-of-some-in-a-borrowed-option-without-moving-it/3203
+                edgetpu_context.as_mut().unwrap().to_external_context(),
             );
 
             log::debug!("init_execution_context() - before set_num_threads()");    
             interpreter.set_num_threads(1);
-        //}
+        }
         
         log::debug!("init_execution_context() - before allocate_tensors()");
 
@@ -217,9 +213,6 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             gec
         );
 
-        log::debug!("init_execution_context() - Interpreter is at: {:p}", &interpreter);
-        log::debug!("init_execution_context() - edge_tpu    is at: {:p}", &edgetpu_context);
-
         state.executions.insert(
             gec,
             TfLiteSession::with_graph(
@@ -229,10 +222,10 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             )
         );
 
-        // log::debug!("init_execution_context() - Interpreter is at: {:p}", &interpreter);
-        // log::debug!("init_execution_context() - edge_tpu    is at: {:p}", &edgetpu_context);
+        log::debug!("init_execution_context() - interpreter is at {:p}", &state.executions.get(&gec).unwrap().graph);
+        log::debug!("init_execution_context() - edge_contxt is at {:p}", &state.executions.get(&gec).unwrap().edgetpu_context);
 
-        log::debug!("init_execution_context() - PASSED");
+        log::debug!("init_execution_context() - passed");
 
         Ok(gec)
     }
@@ -273,8 +266,6 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             execution.graph.tensor_info(tensor_index).unwrap().dims,
         );
 
-        log::debug!("set_input() - BEFORE copy_from_slice()");
-
         execution
             .graph
             .tensor_data_mut(tensor_index)
@@ -302,20 +293,16 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             }
         };
 
-        let interpreter = &mut execution.graph;
-        log::debug!("compute() - Interpreter is at: {:p}", &interpreter);
-
-        let edgetpu_context = &mut execution.tpu_context;
-        log::debug!("compute() - edge_tpu    is at: {:p}", edgetpu_context );
+        log::debug!("compute() - interpreter is at {:p}", &execution.graph);
+        log::debug!("compute() - edge_contxt is at {:p}", &execution.edgetpu_context);
         
-        log::debug!("compute() - before interpreter.invoke()");
+        let interpreter = &mut execution.graph;
+        //let _edgetpu_context = &execution.edgetpu_context.as_mut().unwrap();
 
         interpreter.invoke().map_err(|_| {
             log::error!("init_execution_context() - interpreter invokation failed");
             InferenceError::InterpreterInvocationError
         })?;
-
-        log::debug!("compute() - after interpreter.invoke()");
 
         let output_tensors = interpreter.outputs();
 

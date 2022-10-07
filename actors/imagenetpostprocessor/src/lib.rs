@@ -6,7 +6,8 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use ndarray::{Array, ArrayBase};
 use std::io::Cursor;
 
-mod classes;
+mod imagenet_labels_onnx;
+mod imagenet_labels_tflite;
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, Imagenet)]
@@ -24,27 +25,23 @@ impl Imagenet for ImagenetpostprocessorActor {
             )));
         };
 
-        let raw_result_f32 = bytes_to_f32_vec(tensor.data).unwrap();
+        let raw_result_f32 = bytes_to_f32_vec(tensor.data).await.unwrap();
 
-        let output_tensor = Array::from_shape_vec((1, 1001, 1, 1), raw_result_f32).unwrap();
+        //let output_tensor = Array::from_shape_vec((1, length, 1, 1), raw_result_f32).unwrap();
         //let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
 
-        // let mut probabilities: Vec<(usize, f32)> = output_tensor
-        //     .softmax(ndarray::Axis(1))
-        //     .into_iter()
-        //     .enumerate()
-        //     .collect::<Vec<_>>();
+        let labels: Vec<String> = match raw_result_f32.len() {
+            1000 => { imagenet_labels_onnx::IMAGENT_LABELS_ONNX.lines().map(String::from).collect() },
+               _ => { imagenet_labels_tflite::IMAGENT_LABELS_TFLITE.lines().map(String::from).collect() },
+        };
 
-        // probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        let probabilities: Vec<(usize, f32)> = match raw_result_f32.len() {
+            1000 => { get_onnx_probabilities(raw_result_f32).await },
+            1001 => { get_tflite_probabilities(raw_result_f32).await },
+               _ => { vec![(1111, -1.0); 5]},
+        };
 
-        let mut probabilities: Vec<(usize, f32)> = output_tensor
-            .into_iter()
-            .enumerate()
-            .collect::<Vec<_>>();
-
-        probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-        let labels: Vec<String> = classes::IMAGENT_CLASSES.lines().map(String::from).collect();
+        //let labels: Vec<String> = classes::IMAGENT_CLASSES.lines().map(String::from).collect();
 
         let mut matches: Vec<Classification> = Vec::new();
 
@@ -63,7 +60,34 @@ impl Imagenet for ImagenetpostprocessorActor {
 
 pub type Result<T> = std::io::Result<T>;
 
-pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+pub async fn get_tflite_probabilities(raw_result: std::vec::Vec<f32>) -> Vec<(usize, f32)> {
+    let output_tensor = Array::from_shape_vec((1, 1001, 1, 1), raw_result).unwrap();
+    
+    let mut probabilities: Vec<(usize, f32)> = output_tensor
+    .into_iter()
+    .enumerate()
+    .collect::<Vec<_>>();
+
+    probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    return probabilities;
+}
+
+pub async fn get_onnx_probabilities(raw_result: std::vec::Vec<f32>) -> Vec<(usize, f32)> {
+    let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result).unwrap();
+
+    let mut probabilities: Vec<(usize, f32)> = output_tensor
+        .softmax(ndarray::Axis(1))
+        .into_iter()
+        .enumerate()
+        .collect::<Vec<_>>();
+
+    probabilities.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    return probabilities;
+}
+
+pub async fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     data.chunks(4)
         .into_iter()
         .map(|c| {

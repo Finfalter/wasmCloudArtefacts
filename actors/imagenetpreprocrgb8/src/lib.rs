@@ -9,11 +9,11 @@ mod img;
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, MlPreprocessing)]
-struct ImagenetpreprocessorActor {}
+struct Imagenetpreprocrgb8Actor {}
 
 /// Implementation of MlPreprocessing trait methods
 #[async_trait]
-impl MlPreprocessing for ImagenetpreprocessorActor {
+impl MlPreprocessing for Imagenetpreprocrgb8Actor {
     async fn convert(
         &self,
         _ctx: &Context,

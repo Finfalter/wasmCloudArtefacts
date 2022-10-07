@@ -11,6 +11,7 @@ use wasmcloud_interface_mlpreprocessing::{
 };
 
 const IMAGENET_PREPROCESS_ACTOR: &str = "mlinference/imagenetpreprocessor";
+const IMAGENET_PREPROCRGB8_ACTOR: &str = "mlinference/imagenetpreprocrgb8";
 const IMAGENET_POSTPROCESS_ACTOR: &str = "mlinference/imagenetpostprocessor";
 
 const MNIST_PREPROCESS_ACTOR: &str = "mlinference/mnistpreprocessor";
@@ -116,11 +117,74 @@ impl HttpServer for InferenceapiActor {
                 }
             }
 
+            ("PUT", [model_name, "preprocess", "rgb8"]) => {
+                debug!("receiving POST(model, preprocess) ..");
+
+                // preprocess
+                let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCRGB8_ACTOR)
+                    .convert(
+                        ctx,
+                        &ConversionRequest {
+                            data: req.body.to_owned(),
+                        },
+                    )
+                    .await?;
+
+                // validate
+                validate(model_name, &preprocessed.tensor).await?;
+
+                // predict
+                let prediction: InferenceOutput =
+                    predict(ctx, model_name, preprocessed.tensor).await?;
+
+                if let Status::Error(e) = prediction.result {
+                    Ok(HttpResponse::internal_server_error(format!(
+                        "compute_output: {:?}",
+                        e
+                    )))
+                } else {
+                    HttpResponse::json(prediction, 200)
+                }
+            }
+
             ("PUT", [model_name, "matches"]) => {
                 debug!("receiving POST(model, classes) ..");
 
                 // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCESS_ACTOR)
+                    .convert(
+                        ctx,
+                        &ConversionRequest {
+                            data: req.body.to_owned(),
+                        },
+                    )
+                    .await?;
+
+                // validate
+                validate(model_name, &preprocessed.tensor).await?;
+
+                // predict
+                let prediction: InferenceOutput =
+                    predict(ctx, model_name, preprocessed.tensor).await?;
+
+                // postprocess
+                let postprocessed = ImagenetSender::to_actor(IMAGENET_POSTPROCESS_ACTOR)
+                    .postprocess(ctx, &prediction)
+                    .await?;
+
+                if let Status::Error(e) = prediction.result {
+                    Ok(HttpResponse::internal_server_error(format!(
+                        "compute_output: {:?}",
+                        e
+                    )))
+                } else {
+                    HttpResponse::json(postprocessed, 200)
+                }
+            }
+
+            ("PUT", [model_name, "matches", "rgb8"]) => {
+                // preprocess
+                let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCRGB8_ACTOR)
                     .convert(
                         ctx,
                         &ConversionRequest {

@@ -1,6 +1,6 @@
-# Makefile for imagenetpreprocessor
+# Makefile for imagenetpreprocrgb8
 
-PROJECT  = imagenetpreprocessor
+PROJECT  = imagenetpreprocrgb_8
 VERSION  = $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
 REVISION = 0
 # list of all contract claims for actor signing (space-separated)
@@ -15,9 +15,9 @@ REG_URL  = $(HOST_DEVICE_IP):5000/v2/$(PROJECT):$(VERSION)
 PUSH_REG_CMD = wash reg push --insecure $(REG_URL)
 
 # friendly name for the actor
-ACTOR_NAME = "imagenetpreprocessor"
+ACTOR_NAME = "imagenetpreprocrgb8"
 # optional call alias for actor
-ACTOR_ALIAS=mlinference/imagenetpreprocessor
+ACTOR_ALIAS=mlinference/imagenetpreprocrgb8
 
 include ./actor.mk
 

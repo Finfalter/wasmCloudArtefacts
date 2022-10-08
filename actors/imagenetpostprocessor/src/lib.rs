@@ -1,3 +1,9 @@
+//! This actor is designed to support the following two models:
+//! * https://tfhub.dev/tensorflow/coral-model/mobilenet_v1_1.0_224_quantized/1/default/1
+//!     - additionally, see the [tflite labels](https://github.com/google-coral/edgetpu/blob/master/test_data/imagenet_labels.txt)
+//! * https://github.com/onnx/models/tree/main/vision/classification/mobilenet
+//!     - additionally, see the [ONNX labels](https://github.com/onnx/models/blob/main/vision/classification/synset.txt)
+
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_mlimagenet::{Classification, Imagenet, ImagenetReceiver, Matches};
 use wasmcloud_interface_mlinference::{InferenceOutput, Status};
@@ -27,9 +33,6 @@ impl Imagenet for ImagenetpostprocessorActor {
 
         let raw_result_f32 = bytes_to_f32_vec(tensor.data).await.unwrap();
 
-        //let output_tensor = Array::from_shape_vec((1, length, 1, 1), raw_result_f32).unwrap();
-        //let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
-
         let labels: Vec<String> = match raw_result_f32.len() {
             1000 => { imagenet_labels_onnx::IMAGENT_LABELS_ONNX.lines().map(String::from).collect() },
                _ => { imagenet_labels_tflite::IMAGENT_LABELS_TFLITE.lines().map(String::from).collect() },
@@ -40,8 +43,6 @@ impl Imagenet for ImagenetpostprocessorActor {
             1001 => { get_tflite_probabilities(raw_result_f32).await },
                _ => { vec![(1111, -1.0); 5]},
         };
-
-        //let labels: Vec<String> = classes::IMAGENT_CLASSES.lines().map(String::from).collect();
 
         let mut matches: Vec<Classification> = Vec::new();
 

@@ -13,25 +13,21 @@ The latest version in github HEAD (as of March 2022) has not been released,
 and includes signature checks, and are not compatible with the scripts
 and models in this repo.
 
-
 ### Docker Compose
 
 Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2).
 
-
 ### Wasmcloud host
 
 Download a wasmcloud host binary release for your platform from
-[Releases](https://github.com/wasmCloud/wasmcloud-otp/releases) 
+[Releases](https://github.com/wasmCloud/wasmcloud-otp/releases)
 and unpack it. The path to the download folder should be set as
-`WASMCLOUD_HOST_HOME` in `deploy/env` 
-
+`WASMCLOUD_HOST_HOME` in `deploy/env`
 
 ## Build actors and providers
 
-From the top-level **directory** build with `make`. This should complete
+From the top-level __directory__ build with `make`. This should complete
 without errors.
-
 
 ### Prepare models
 
@@ -42,7 +38,6 @@ invoice", a `.toml` file listing the bindle artifacts. Each artifact
 has a sha256 hash and file size of each artifact. See the
 existing toml files in `bindle/models` for examples.
 
-
 ### Configuration
 
 Update paths in file `deploy/env` to match your development environment.
@@ -51,8 +46,7 @@ Be sure to set BINDLE and BINDLE_SERVER in `env` to the paths to the bindle cli
 and bindle server executables, respectively. If they are in your $PATH,
 you can just set these to `bindle` and `bindle-server`. If you built
 bindle from git, use the 0.7.1 tag, run `cargo build`, and set
-BINDLE_HOME to the path to the git repo. 
-
+BINDLE_HOME to the path to the git repo.
 
 ## Running
 
@@ -61,7 +55,7 @@ The script `deploy/run.sh` contains commands to run everything. In the
 
 Start the bindle server and load the models.
 
-```
+```bash
 ./run.sh bindle-start
 ./run.sh bindle-create
 ```
@@ -72,7 +66,7 @@ app, add `--console` to the end of the following command to open a new
 terminal window with the host logs. The logs may be useful for
 diagnosing any problems.
 
-```
+```bash
 ./run.sh all
 # or, to open a $TERMINAL window with host logs
 ./run.sh all --console
@@ -84,24 +78,24 @@ After a successful startup the *washboard* should look similar to the following 
 ![washboard after successful launch](images/washboard.png "washboard after successful launch")
 </div>
 
-
 If everything started correctly, try sending an image to be classified:
 (try any of the images in `images/`, or try one of your own!
 
-```
+```bash
 curl -T images/cat.jpg http://localhost:8078/mobilenetv27/matches | jq
 ```
 
-
 To stop the host and providers,
-```
+
+```bash
 /run.sh wipe
 ```
+
 The above command stops everything except the bindle server.
 
-
 To stop the bindle server,
-```
+
+```bash
 ./run.sh bindle-stop
 ```
 

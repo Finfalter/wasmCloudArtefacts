@@ -12,10 +12,10 @@ use wasmcloud_provider_mlinference::{
     GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TfLiteEngine, TractEngine,
 };
 
-// main (via provider_main) initializes the threaded tokio executor,
-// listens to lattice rpcs, handles actor links,
-// and returns only when it receives a shutdown message
-//
+/// main (via provider_main) initializes the threaded tokio executor,
+/// listens to lattice rpcs, handles actor links,
+/// and returns only when it receives a shutdown message
+///
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_log::LogTracer::init()?;
 
@@ -348,11 +348,6 @@ impl MlInferenceProvider {
         let engines_lock = self.engines.write().await;
 
         log::debug!("get_engine() - context: {:?}", &context);
-        log::debug!("get_engine() -  what is inside:");
-        log::debug!("get_engine() - content of Engines: {:?}: with length {:?}", &engines_lock.keys(), &engines_lock.keys().len());
-        log::debug!("get_engine() - insider report DONE!");
-
-        //assert_eq!(engines_lock.is_empty(), false);
 
         match context.graph_encoding {
             GraphEncoding::Onnx | GraphEncoding::Tensorflow => {

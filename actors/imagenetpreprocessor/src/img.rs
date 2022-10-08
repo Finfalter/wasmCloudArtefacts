@@ -1,3 +1,6 @@
+//! This actor is designed to support the following two models:
+//! * https://github.com/onnx/models/tree/main/vision/classification/mobilenet
+
 use image::{load_from_memory, Pixel};
 use ndarray::s;
 use wasmbus_rpc::actor::prelude::*;
@@ -22,31 +25,6 @@ pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
 
     Ok(byte_array)
 }
-
-// pub async fn preprocess(raw_data: &[u8], _height: u32, _width: u32) -> RpcResult<Vec<u8>> {
-//     log::debug!("preprocess() - entry point");
-
-//     let raw_image = load_from_memory(raw_data).map_err(|e| RpcError::Deser(e.to_string()))?;
-
-//     Ok(raw_image.into_bytes())
-// }
-
-
-// pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
-//     log::debug!("preprocess() - entry point");
-
-//     let raw_image = load_from_memory(raw_data).map_err(|e| RpcError::Deser(e.to_string()))?;
-
-//     let image = image::imageops::resize(
-//         &raw_image.to_rgb8(),
-//         width,
-//         height,
-//         ::image::imageops::FilterType::Triangle,
-//     );
-
-//     Ok(image.into_vec())
-// }
-
 
 pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
     log::debug!("preprocess() - entry point");

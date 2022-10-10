@@ -88,7 +88,7 @@ impl HttpServer for InferenceapiActor {
             }
 
             ("PUT", [model_name, "preprocess"]) => {
-                debug!("receiving POST(model, preprocess) ..");
+                debug!("receiving PUT(model, preprocess) ..");
 
                 // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCESS_ACTOR)
@@ -118,7 +118,7 @@ impl HttpServer for InferenceapiActor {
             }
 
             ("PUT", [model_name, "preprocess", "rgb8"]) => {
-                debug!("receiving POST(model, preprocess) ..");
+                debug!("receiving PUT(model, preprocess) ..");
 
                 // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCRGB8_ACTOR)

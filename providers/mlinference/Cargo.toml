@@ -18,10 +18,10 @@ thiserror  = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
 tracing-log = "0.1"
-tract-data = "0.17"
-tract-linalg = "0.17"
-tract-onnx = { version = "0.17" }
-tract-tensorflow = "0.17"
+tract-data = "0.16.1"
+tract-linalg = "0.16.1"
+tract-onnx = { version = "0.16.1" }
+tract-tensorflow = "0.16.1"
 wasmbus-rpc = "0.10"
 edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c" }
 tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15" }

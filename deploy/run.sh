@@ -77,7 +77,7 @@ INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
 
-MODEL_CONFIG=actor_config.json
+MODEL_CONFIG=actor_config_wo_tpu.json
 
 # command to base64 encode stdin to stdout
 BASE64_ENC=base64
@@ -252,6 +252,19 @@ start_actors() {
     cd $_here
 }
 
+start_actors_fast() {
+
+    echo "starting actors .."
+    _here=$PWD
+    cd ${_DIR}/../actors
+    for i in */; do
+        if [ -f $i/Makefile ]; then
+            make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i start
+        fi
+    done
+    cd $_here
+}
+
 # start wasmcloud capability providers
 # idempotent
 start_providers() {
@@ -259,6 +272,20 @@ start_providers() {
 
     # make sure inference provider is built
     make -C ${_DIR}/../providers/mlinference all
+
+    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
+	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+
+    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
+    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    #cd ../../../capability-providers/httpserver-rs && make push && make start
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
+}
+
+# start wasmcloud capability providers
+# idempotent
+start_providers_fast() {
+    local _host_id=$(host_id)
 
     echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
@@ -315,9 +342,6 @@ check_files() {
 
 run_all() {
 
-    # to be removed
-    docker container stop registry
-
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
 
@@ -361,6 +385,50 @@ run_all() {
     show_inventory
 }
 
+run_fast() {
+
+    # make sure we have all prerequisites installed
+    ${_DIR}/checkup.sh
+
+    if [ ! -f $SECRETS ]; then
+        create_secrets
+    fi
+    check_files
+
+    # start all the containers in case the target is localhost
+    if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
+        # help preparing to ramp up the remote device
+        prepare_remote_device
+
+        # in case you do not run a local registry, switch it on
+        docker container start registry
+    else 
+        # in case you still run a local registry, switch it off
+        docker container stop registry
+
+        echo "starting runtime, nats and registry on host"
+        start_services
+    fi
+
+    # start host console to view logs
+    if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
+        $TERMINAL -e ./run.sh host attach &
+    fi
+
+    # do NOT push capability provider(s) to local registry
+
+    # start capability providers: httpserver and sqldb 
+    start_providers_fast
+
+    # start all actors, without re-building or pushing
+    start_actors_fast
+
+    # link providers with actors
+    link_providers
+
+    show_inventory
+}
+
 case $1 in 
 
     secrets ) create_secrets ;;
@@ -375,6 +443,7 @@ case $1 in
     link-providers ) link_providers ;;
     host ) shift; host_cmd $@ ;;
     run-all | all ) shift; run_all $@ ;;
+    run-fast | fast ) shift; run_fast $@ ;;
 
     * ) show_help && exit 1 ;;
 

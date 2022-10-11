@@ -1,4 +1,4 @@
-top_targets     ?= all clean test lint validate
+top_targets     ?= all clean test lint validate push
 
 REG_SERVER ?= 127.0.0.1:5000
 
@@ -11,4 +11,4 @@ $(top_targets)::
 	done
 endif
 
-.PHONY: all clean test lint validate
+.PHONY: all clean test lint validate push

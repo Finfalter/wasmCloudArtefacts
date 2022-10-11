@@ -1,6 +1,8 @@
+#[cfg(feature = "tflite")]
 mod tflite;
 mod tract;
 
+#[cfg(feature = "tflite")]
 pub use self::tflite::TfLiteEngine;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -11,7 +13,7 @@ use wasmcloud_interface_mlinference::{InferenceOutput, Tensor};
 pub type Graph = u32;
 
 /// GraphEncoding
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GraphEncoding {
     Onnx,
@@ -43,14 +45,24 @@ impl Default for ExecutionTarget {
     }
 }
 
+impl Default for Box<dyn InferenceEngine + Send + Sync> {
+    fn default() -> Box<dyn InferenceEngine + Send + Sync>
+    where
+        Self: Sized,
+    {
+        Box::new(<TractEngine as Default>::default())
+    }
+}
+
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph>;
+    async fn load(&self, model: &[u8]) -> InferenceResult<Graph>;
 
     async fn init_execution_context(
         &self,
         graph: Graph,
+        target: &ExecutionTarget,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext>;
 

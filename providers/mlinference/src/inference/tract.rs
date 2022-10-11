@@ -68,10 +68,9 @@ impl ModelState {
 #[async_trait]
 impl InferenceEngine for TractEngine {
     /// load
-    async fn load(&self, builder: &[u8], target: &ExecutionTarget) -> InferenceResult<Graph> {
-        log::debug!("load() - target: {:#?}", target);
+    async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
 
-        let model_bytes = builder.to_vec();
+        let model_bytes = model.to_vec();
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
 
@@ -92,12 +91,32 @@ impl InferenceEngine for TractEngine {
     }
 
     /// init_execution_context
-    async fn init_execution_context(
+    async fn 
+    init_execution_context(
         &self,
         graph: Graph,
+        target: &ExecutionTarget,
         encoding: &GraphEncoding,
     ) -> InferenceResult<GraphExecutionContext> {
         log::debug!("init_execution_context() - ENTERING");
+
+        log::debug!(
+            "init_execution_context() - detected execution target: {:?}",
+            target
+        );
+
+        log::debug!(
+            "init_execution_context() - detected encoding: {:?}",
+            encoding
+        );
+
+        if !matches!(target, &ExecutionTarget::Cpu) {
+            log::error!(
+                "This framework does not support execution target '{:?}'",
+                target
+            );
+            return Err(InferenceError::UnsupportedExecutionTarget);
+        }
 
         let mut state = self.state.write().await;
         let mut model_bytes = match state.models.get(&graph) {
@@ -126,11 +145,6 @@ impl InferenceEngine for TractEngine {
                 return Err(InferenceError::InvalidEncodingError);
             }
         };
-
-        log::debug!(
-            "init_execution_context() - detected encoding: {:?}",
-            encoding
-        );
 
         let gec = state.key(state.executions.keys());
 
@@ -178,7 +192,7 @@ impl InferenceEngine for TractEngine {
             InferenceFact::dt_shape(f32::datum_type(), shape.clone()),
         )?;
 
-        let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec())?;
+        let data: Vec<f32> = bytes_to_f32_vec(tensor.data.as_slice().to_vec()).await?;
         let input: TractTensor = Array::from_shape_vec(shape, data)?.into();
 
         match execution.input_tensors {
@@ -307,7 +321,7 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec());
+        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec()).await;
 
         let io = InferenceOutput {
             result: Status::Success,
@@ -337,7 +351,7 @@ impl InferenceEngine for TractEngine {
 
 pub type Result<T> = std::io::Result<T>;
 
-pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
+pub async fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     data.chunks(4)
         .into_iter()
         .map(|c| {
@@ -347,7 +361,7 @@ pub fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
         .collect()
 }
 
-pub fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+pub async fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
     let sum: f32 = data.iter().sum();
     log::debug!(
         "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",

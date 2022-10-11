@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # customize environment, and system-specific urls and file paths
 # not that changes to this file will not be tracked.
 # This behavior may be configured with 
@@ -5,10 +6,18 @@
 #   git update-index --no-assume-unchanged deploy/env
 # see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
+export RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info
+export HOST_DEVICE_IP=127.0.0.1
+export BINDLE_HOME="$HOME/git/bindle"
+export BINDLE="$BINDLE_HOME/target/debug/bindle"
+export BINDLE_SERVER="$BINDLE_HOME/target/debug/bindle-server"
+export WASMCLOUD_HOST_HOME="$HOME/opt/wasmcloud"
+
+
 # define the IP address of the host 
 #export HOST_DEVICE_IP=192.168.178.24
 
-if [ -z ${HOST_DEVICE_IP+x} ] 
+if [ -z "${HOST_DEVICE_IP}" ] 
 then 
   echo -n "HOST_DEVICE_IP is unset - " 
   echo "assumption: host is localhost"
@@ -23,7 +32,7 @@ fi
 # define the IP address of the (remote) target device 
 #export TARGET_DEVICE_IP=192.168.178.148
 
-if [ -z ${TARGET_DEVICE_IP+x} ] 
+if [ -z "${TARGET_DEVICE_IP}" ] 
 then 
   echo -n "TARGET_DEVICE_IP is unset - " 
   echo "assumption: target is localhost"
@@ -40,12 +49,11 @@ fi
 export BINDLE_URL=${BINDLE_URL:-http://${HOST_DEVICE_IP}:8080/v1/}
 echo "BINDLE_URL is set to '${BINDLE_URL}'"
 
-export RUST_LOG=${RUST_LOG:-debug}
 echo "RUST_LOG is set to '${RUST_LOG}'"
 
 # either define BINDLE_HOME (to the git folder),
 # or define BINDLE and BINDLE_SERVER to the paths to the compiled executables
-export BINDLE_HOME=$HOME/dev/rust/bindle
+export BINDLE_HOME=${BINDLE_HOME:-$HOME/dev/rust/bindle}
 echo "BINDLE_HOME is set to '${BINDLE_HOME}'"
 
 if [ -z "$BINDLE" ] && [ -n "$BINDLE_HOME" ]; then
@@ -58,7 +66,7 @@ if [ -z "$BINDLE_SERVER" ] && [ -n "$BINDLE_HOME" ]; then
 fi
 
 # installation directory of wasmcloud host
-export WASMCLOUD_HOST_HOME=$HOME/dev/wasmcloud/wasmCloudHost
+export WASMCLOUD_HOST_HOME=${WASMCLOUD_HOST_HOME:-$HOME/dev/wasmcloud/wasmCloudHost}
 echo "WASMCLOUD_HOST_HOME is set to '${WASMCLOUD_HOST_HOME}'"
 
-echo 
+

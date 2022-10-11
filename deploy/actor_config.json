@@ -4,7 +4,11 @@
         "identity": "identity_model/0.2.0",
         "plus3": "plus3/0.1.0",
         "mobilenetv27": "mobilenetv2-7/0.1.0",
-        "squeezenetv117": "squeezenetv1-1-7/0.1.0"
+        "squeezenetv117": "squeezenetv1-1-7/0.1.0",
+        "mnistv1": "mobilenetv1_uint8_quant/0.1.0",
+        "mnistv2": "mobilenetv2_uint8_quant/0.1.0",
+        "mobilenetv1tpu": "mobilenetv1_quant_edgetpu/0.1.0",
+        "resnet152v27": "resnet152-v2-7/0.1.0"
       }
     },
     "values": {

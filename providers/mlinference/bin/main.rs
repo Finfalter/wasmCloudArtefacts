@@ -1,6 +1,5 @@
 //! mlinference capability provider
 //!
-
 use bindle::client::{tokens::NoToken, Client};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
@@ -8,17 +7,24 @@ use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
     InferenceInput, InferenceOutput, MlError, MlInference, MlInferenceReceiver,
 };
+#[cfg(feature = "tflite")]
+use wasmcloud_provider_mlinference::TfLiteEngine;
 use wasmcloud_provider_mlinference::{
-    get_default_inference_result, load_settings, BindleLoader, Graph, GraphExecutionContext,
-    InferenceEngine, ModelContext, ModelZoo, TractEngine,
+    get_default_inference_result, load_settings, BindleError, BindleLoader, Engine, Graph,
+    GraphEncoding, GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TractEngine,
 };
 
-// main (via provider_main) initializes the threaded tokio executor,
-// listens to lattice rpcs, handles actor links,
-// and returns only when it receives a shutdown message
-//
+/// main (via provider_main) initializes the threaded tokio executor,
+/// listens to lattice rpcs, handles actor links,
+/// and returns only when it receives a shutdown message
+///
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    provider_main(MlInferenceProvider::default())?;
+    tracing_log::LogTracer::init()?;
+
+    provider_main(
+        MlInferenceProvider::default(),
+        Some("mlinference".to_string()),
+    )?;
 
     if std::env::var("BINDLE_URL").is_err() {
         log::error!("No 'BINDLE_URL' defined, verify your bindle url.");
@@ -41,7 +47,20 @@ struct MlInferenceProvider {
     ///   - initialize actor link as soon as we receive the putlink command
     ///   - if health check or rpc is received when not ready, return not-ready error
     actors: Arc<RwLock<HashMap<String, ModelZoo>>>,
-    engine: TractEngine, // could be arc of box of enum or
+
+    /// There are the following relevant types:
+    ///     - InferenceFramework
+    ///     - Engine
+    ///     - InferenceEngine
+    ///     - GraphEncoding
+    ///
+    /// InferenceFramework corresponds to an integrated crate.
+    /// An InferenceFramework may support a multitude of Engine
+    /// An InferenceFramework may support a multitude of GraphEncoding.
+    /// Engine is a wrapper of InferenceEngine
+    /// InferenceEngine defines common behavior
+    /// GraphEncoding defines a model's encoding.
+    engines: Arc<RwLock<HashMap<InferenceFramework, Engine>>>,
 }
 
 /// use default implementations of provider message handlers
@@ -50,7 +69,7 @@ impl ProviderDispatch for MlInferenceProvider {}
 #[async_trait]
 impl ProviderHandler for MlInferenceProvider {
     async fn put_link(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
-        let this = self.clone();
+        let mut this = self.clone();
         let ld = ld.clone();
         tokio::spawn(async move { this.put_link_sub(&ld).await });
         Ok(true)
@@ -68,7 +87,14 @@ impl ProviderHandler for MlInferenceProvider {
         };
 
         for (_, context) in model_zoo.iter() {
-            self.engine
+            let engine = match self.get_engine(&context).await {
+                Ok(v) => v,
+                Err(_) => {
+                    return;
+                }
+            };
+
+            engine
                 .drop_model_state(&context.graph, &context.graph_execution_context)
                 .await;
         }
@@ -78,7 +104,7 @@ impl ProviderHandler for MlInferenceProvider {
 }
 
 impl MlInferenceProvider {
-    async fn put_link_sub(&self, ld: &LinkDefinition) -> Result<bool, RpcError> {
+    async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         log::debug!("put_link_sub() - link definition is '{:?}'", ld);
 
         let settings =
@@ -113,12 +139,27 @@ impl MlInferenceProvider {
 
         for (_, context) in model_zoo.iter_mut() {
             let downloads =
-                BindleLoader::get_model_and_metadata(&bindle_client, &context.bindle_url)
+                match BindleLoader::get_model_and_metadata(&bindle_client, &context.bindle_url)
                     .await
-                    .map_err(|error| {
-                        log::error!("get_model_and_metadata() failed!");
-                        RpcError::ProviderInit(format!("{}", error))
-                    })?;
+                {
+                    //.map_err(|error| {
+                    //    log::error!("get_model_and_metadata() failed!");
+                    //    RpcError::ProviderInit(format!("{}", error))
+                    //}) {
+                    Ok((metadata, model)) => (metadata, model),
+                    Err(BindleError::BindleModelNotEnabled(e)) => {
+                        log::error!("get_model: skipping unsupported model: {}", e);
+                        continue;
+                    }
+                    Err(err) => {
+                        let msg = format!(
+                            "failed to load model from bindle url '{}': {}",
+                            &context.bindle_url, err
+                        );
+                        log::error!("{}", &msg);
+                        return Err(RpcError::ProviderInit(msg));
+                    }
+                };
 
             let (metadata, model_data_bytes) = downloads;
 
@@ -127,17 +168,23 @@ impl MlInferenceProvider {
                 RpcError::InvalidParameter(format!("{:?}", error))
             })?;
 
-            let graph: Graph = self
-                .engine
-                .load(&model_data_bytes, &context.execution_target)
+            // each link definition may address a different target
+            // such that it may be necessary to support multiple engines.
+            let engine = self.get_or_else_set_engine(&context).await?;
+
+            let graph: Graph = engine
+                .load(&model_data_bytes)
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
             context.graph = graph;
 
-            let gec: GraphExecutionContext = self
-                .engine
-                .init_execution_context(context.graph, &context.graph_encoding)
+            let gec: GraphExecutionContext = engine
+                .init_execution_context(
+                    context.graph,
+                    &context.execution_target,
+                    &context.graph_encoding,
+                )
                 .await
                 .map_err(|error| RpcError::ProviderInit(format!("{}", error)))?;
 
@@ -194,7 +241,8 @@ impl MlInference for MlInferenceProvider {
             }
         };
 
-        let engine = self.engine.clone();
+        let engine = self.get_engine(&model_context).await?;
+
         // it could be an expensive operation to clone the tensor,
         // but we hope (unconfirmed) the compiler will recognize that
         // the caller (dispatch fn) doesn't need it anymore and optimize out the clone.
@@ -213,6 +261,9 @@ impl MlInference for MlInferenceProvider {
                     e.to_string(),
                 )));
             }
+
+            log::debug!("main.rs - GOT AS FAR");
+
             if let Err(e) = engine.compute(model_context.graph_execution_context).await {
                 log::error!("predict() - GraphExecutionContext not found: {}", e);
                 return get_default_inference_result(Some(MlError::ContextNotFoundError(
@@ -236,5 +287,128 @@ impl MlInference for MlInferenceProvider {
 
         log::debug!("predict() - PASSED, result is '{:?}'", &result);
         Ok(result)
+    }
+}
+
+impl MlInferenceProvider {
+    /// Each link definition may address a different target
+    /// such that it may be necessary to support multiple engines.
+    async fn get_or_else_set_engine(&mut self, context: &ModelContext) -> Result<Engine, RpcError> {
+        let mut engines_lock = self.engines.write().await;
+
+        match context.graph_encoding {
+            GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
+                match engines_lock.get(&InferenceFramework::Tract) {
+                    Some(e) => {
+                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected for '{}'.", context.bindle_url);
+                        Ok(e.clone())
+                    }
+                    None => {
+                        let feedback = engines_lock.insert(
+                            InferenceFramework::Tract,
+                            Arc::new(Box::new(TractEngine::default())),
+                        );
+                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created for '{}'.", context.bindle_url);
+
+                        if feedback.is_none() {
+                            log::debug!(
+                                "get_or_else_set_engine() - Onnx/Tensorflow was definitely created"
+                            );
+                        } else {
+                            log::debug!(
+                                "get_or_else_set_engine() - Onnx/Tensorflow was NOT created!"
+                            );
+                        }
+
+                        log::debug!(
+                            "get_or_else_set_engine() - content of Engines: {:?}: with length {:?}",
+                            &engines_lock.keys(),
+                            &engines_lock.keys().len()
+                        );
+
+                        //assert_eq!(engines_lock.is_empty(), false);
+
+                        Ok(engines_lock
+                            .get(&InferenceFramework::Tract)
+                            .unwrap()
+                            .clone())
+                    }
+                }
+            }
+            #[cfg(feature = "tflite")]
+            GraphEncoding::TfLite => {
+                match engines_lock.get(&InferenceFramework::TfLite) {
+                    Some(e) => {
+                        log::debug!("get_or_else_set_engine() - previously created TfLite engine selected for '{}'.", context.bindle_url);
+                        Ok(e.clone())
+                    }
+                    None => {
+                        let feedback = engines_lock.insert(
+                            InferenceFramework::TfLite,
+                            Arc::new(Box::new(TfLiteEngine::default())),
+                        );
+                        log::debug!("get_or_else_set_engine() - TfLite engine selected and created for '{}'.", context.bindle_url);
+
+                        if feedback.is_none() {
+                            log::debug!(
+                                "get_or_else_set_engine() - TfLite engine was definitely created"
+                            );
+                        } else {
+                            log::debug!("get_or_else_set_engine() - TfLite was NOT created!");
+                        }
+
+                        log::debug!(
+                            "get_or_else_set_engine() - content of Engines: {:?}: with length {:?}",
+                            &engines_lock.keys(),
+                            &engines_lock.keys().len()
+                        );
+
+                        Ok(engines_lock
+                            .get(&InferenceFramework::TfLite)
+                            .unwrap()
+                            .clone())
+                    }
+                }
+            }
+            _ => {
+                log::error!(
+                    "unsupported graph encoding detected '{:?}'",
+                    &context.graph_encoding
+                );
+                Err(RpcError::NotImplemented)
+            }
+        }
+    }
+
+    async fn get_engine(&self, context: &ModelContext) -> Result<Engine, RpcError> {
+        let engines_lock = self.engines.write().await;
+
+        log::debug!("get_engine() - context: {:?}", &context);
+
+        match context.graph_encoding {
+            GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
+                match engines_lock.get(&InferenceFramework::Tract) {
+                    Some(e) => Ok(e.clone()),
+                    None => Err(RpcError::InvalidParameter(
+                        "get_engine() - No engine found for graph encoding 'Onnx' or 'Tensorflow'"
+                            .to_string(),
+                    )),
+                }
+            }
+            #[cfg(feature = "tflite")]
+            GraphEncoding::TfLite => match engines_lock.get(&InferenceFramework::TfLite) {
+                Some(e) => Ok(e.clone()),
+                None => Err(RpcError::InvalidParameter(
+                    "get_engine() - No engine found for graph encoding 'TfLite'".to_string(),
+                )),
+            },
+            _ => {
+                log::error!(
+                    "get_engine() - unsupported graph encoding detected '{:?}'",
+                    &context.graph_encoding
+                );
+                Err(RpcError::NotImplemented)
+            }
+        }
     }
 }

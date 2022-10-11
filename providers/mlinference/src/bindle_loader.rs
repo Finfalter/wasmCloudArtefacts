@@ -91,19 +91,6 @@ impl BindleLoader {
                 BindleError::BindleNoParcelOfGroupMetadataError
             })?;
 
-        let model_data_blob: Vec<u8> = bindle_client
-            .get_parcel(bindle_url, &model_parcel.label.sha256)
-            .await
-            .map_err(|_| {
-                log::error!("Bindle Parcel 'model' could not be fetched!");
-                BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
-            })?;
-        log::info!(
-            "successfully downloaded model '{}' of size {}",
-            model_parcel.label.name,
-            model_data_blob.len()
-        );
-
         let metadata_blob: Vec<u8> = bindle_client
             .get_parcel(bindle_url, &metadata_parcel.label.sha256)
             .await
@@ -124,11 +111,33 @@ impl BindleLoader {
                 BindleError::BindleParsingMetadataError(format!("{}", error))
             })?;
 
+        if !crate::model_encoding_enabled(metadata.graph_encoding) {
+            let err = format!(
+                "Skipping model {}: graph type {:?} not enabled",
+                &metadata.model_name.unwrap_or_default(),
+                metadata.graph_encoding
+            );
+            log::error!("{}", &err);
+            return Err(BindleError::BindleModelNotEnabled(err));
+        }
+
+        let model_data_blob: Vec<u8> = bindle_client
+            .get_parcel(bindle_url, &model_parcel.label.sha256)
+            .await
+            .map_err(|_| {
+                log::error!("Bindle Parcel 'model' could not be fetched!");
+                BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
+            })?;
+        log::info!(
+            "successfully downloaded model '{}' of size {}",
+            model_parcel.label.name,
+            model_data_blob.len()
+        );
+
         Ok((metadata, model_data_blob))
     }
 
     /// get first member of
-    //fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> BindleResult<&bindle::Parcel> {
     fn get_first_member_of<'a>(
         parcels: &'a [bindle::Parcel],
         group: &'a str,
@@ -190,4 +199,7 @@ pub enum BindleError {
 
     #[error("Error parsing metadata {0}")]
     BindleParsingMetadataError(String),
+
+    #[error("Model is not enabled in this build {0}")]
+    BindleModelNotEnabled(String),
 }

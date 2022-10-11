@@ -1,6 +1,6 @@
 # Makefile for examples/actor
 
-subdirs = inferenceapi imagepreprocessor imagenetpostprocessor
+subdirs = $(wildcard */)
 
 include ../build/makefiles/common.mk
 

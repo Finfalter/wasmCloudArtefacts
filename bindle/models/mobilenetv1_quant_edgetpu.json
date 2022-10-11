@@ -1,0 +1,9 @@
+{
+	"model_name":"mobilenetv1_quant_edgetpu",
+	"graph_encoding":"tf_lite",
+	"execution_target":"tpu",
+	"tensor_type":"U8",
+	"tensor_dimensions_in":[1, 224, 224, 3],
+	"tensor_dimensions_out":[1, 1000]
+}
+

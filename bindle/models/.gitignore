@@ -1,0 +1,4 @@
+# skip 250MB resnet model 
+resnet152-v2-7.onnx
+resnet152-v2-7.onnx.*
+

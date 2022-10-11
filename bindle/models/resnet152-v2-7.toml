@@ -1,0 +1,36 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "resnet152-v2-7"
+version = "0.1.0"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+description = "Resnet152 v2-7 onnx model"
+# download resnet152-v2-7 model from
+# https://github.com/onnx/models/blob/main/vision/classification/resnet/model/resnet152-v2-7.onnx?raw=true
+
+[annotations]
+myname = "N/A"
+
+[[group]]
+name = "model"
+satisfiedBy = "allOf"
+required = true
+
+[[group]]
+name = "metadata"
+satisfiedBy = "allOf"
+required = true
+
+[[parcel]]
+label.sha256 = '40fb3f6dd313ba786a2c8077a0ef7d7b4afeda5d037365400d3a7fbc2b1bee64'
+label.mediaType = 'application/octet-stream'
+label.name = 'resnet152-v2-7.onnx'
+label.size = 241503848
+conditions.memberOf = ["model"]
+
+[[parcel]]
+label.sha256 = 'dfe29ac7d28622c7518bbd3a9c6e36eff40da9fe27f9c4699e7650c6a56e850f'
+label.mediaType = 'application/json'
+label.name = 'resnet152-v2-7.json'
+label.size = 194
+conditions.memberOf = ["metadata"]

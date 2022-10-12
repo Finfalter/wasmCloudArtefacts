@@ -9,6 +9,7 @@ cat <<_SHOW_HELP
 
   Basics:
    $0 all                          - run everything
+   $0 restart                      - re-run everything
    $0 wipe                         - stop everything and erase all secrets
 
   Bindle:
@@ -28,6 +29,7 @@ _SHOW_HELP
 ## ---------------------------------------------------------------
 
 check=$(printf '\342\234\224\n' | iconv -f UTF-8)
+is_restart=false
 
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
 source $_DIR/env
@@ -51,8 +53,8 @@ BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 ##
 #   WASMCLOUD HOST
 ##
-
-# (defined in env)
+WASMCLOUD_PORT=4000
+# (further definitions in env)
 
 ##
 #   CAPABILITY PROVIDERS
@@ -102,6 +104,7 @@ host_cmd() {
 
 # stop docker and wipe all data (database, nats cache, host provider/actors, etc.)
 wipe_all() {
+    is_restart=$1
 
     cat >$SECRETS <<__WIPE
 WASMCLOUD_CLUSTER_SEED=
@@ -118,10 +121,16 @@ __WIPE
 
     ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
     ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
+    
     killall --quiet -KILL wasmcloud_httpserver_default || true
     killall --quiet -KILL wasmcloud_mlinference_default || true
 
-    wash drain all
+    if [ ! "$is_restart" = true ] ; then
+        echo 'going to shutdown .. '
+        wash drain all
+    else
+        echo 'detected a restart .. not draining resources'
+    fi
 
     # clear bindle cache
     rm -rf ~/.cache/bindle ~/Library/Caches/bindle
@@ -240,26 +249,16 @@ prepare_remote_device() {
 }
 
 start_actors() {
-
     echo "starting actors .."
     _here=$PWD
     cd ${_DIR}/../actors
     for i in */; do
         if [ -f $i/Makefile ]; then
-            make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
-        fi
-    done
-    cd $_here
-}
-
-start_actors_fast() {
-
-    echo "starting actors .."
-    _here=$PWD
-    cd ${_DIR}/../actors
-    for i in */; do
-        if [ -f $i/Makefile ]; then
-            make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i start
+            if [ "$is_restart" = true ] ; then
+                make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i start
+            else
+                make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
+            fi
         fi
     done
     cd $_here
@@ -270,22 +269,10 @@ start_actors_fast() {
 start_providers() {
     local _host_id=$(host_id)
 
-    # make sure inference provider is built
-    make -C ${_DIR}/../providers/mlinference all
-
-    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
-
-    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
-    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
-    #cd ../../../capability-providers/httpserver-rs && make push && make start
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
-}
-
-# start wasmcloud capability providers
-# idempotent
-start_providers_fast() {
-    local _host_id=$(host_id)
+    if [ "$is_restart" != true ] ; then
+        # make sure inference provider is built
+        make -C ${_DIR}/../providers/mlinference all
+    fi
 
     echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
 	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
@@ -340,52 +327,23 @@ check_files() {
 	jq < $HTTP_CONFIG >/dev/null
 }
 
-run_all() {
-
-    # make sure we have all prerequisites installed
-    ${_DIR}/checkup.sh
-
-    if [ ! -f $SECRETS ]; then
-        create_secrets
-    fi
-    check_files
-
-    # start all the containers in case the target is localhost
-    if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
-        # help preparing to ramp up the remote device
-        prepare_remote_device
-
-        # in case you do not run a local registry, switch it on
-        docker container start registry
-    else 
-        # in case you still run a local registry, switch it off
-        docker container stop registry
-
-        echo "starting runtime, nats and registry on host"
-        start_services
-    fi
-
-    # start host console to view logs
-    if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
-        $TERMINAL -e ./run.sh host attach &
-    fi
-
-    # push capability provider to local registry
-    push_capability_provider
-
-    # build, push, and start all actors
-    start_actors
-
-    # start capability providers: httpserver and sqldb 
-    start_providers
-
-    # link providers with actors
-    link_providers
-
-    show_inventory
+wait_for_wasmcloud() {
+    # This might be overkill and could be replaced with a sleep
+    # otherwise 'nc' would have to be on the required dependencies list
+    until nc localhost $WASMCLOUD_PORT -w1 -z ; do
+        echo Waiting for wasmCloud to start ...
+        sleep 1
+    done
 }
 
-run_fast() {
+run_all() {
+    start=$(date +%s)
+
+    if [ "$is_restart" = true ]; then
+        echo "going to restart the application .."
+    else
+        echo "running a full startup cycle .."
+    fi
 
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
@@ -415,18 +373,37 @@ run_fast() {
         $TERMINAL -e ./run.sh host attach &
     fi
 
-    # do NOT push capability provider(s) to local registry
+    wait_for_wasmcloud
+
+    if [ "$is_restart" != true ] ; then
+        # push capability provider to local registry
+        push_capability_provider
+    fi
+
+    # build, push, and start all actors
+    start_actors is_restart
 
     # start capability providers: httpserver and sqldb 
-    start_providers_fast
-
-    # start all actors, without re-building or pushing
-    start_actors_fast
+    start_providers is_restart
 
     # link providers with actors
     link_providers
 
     show_inventory
+
+    end=$(date +%s)
+    execution_time=$(( $end - $start ))
+    echo "Starting up this application took $execution_time seconds."
+}
+
+run_restart() {    
+    is_restart=true
+
+    wipe_all $is_restart
+
+    run_all $is_restart
+
+    is_restart=false
 }
 
 case $1 in 
@@ -443,9 +420,8 @@ case $1 in
     link-providers ) link_providers ;;
     host ) shift; host_cmd $@ ;;
     run-all | all ) shift; run_all $@ ;;
-    run-fast | fast ) shift; run_fast $@ ;;
+    run-restart | restart) shift; run_restart $@ ;;
 
     * ) show_help && exit 1 ;;
 
 esac
-

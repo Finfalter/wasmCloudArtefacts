@@ -2,7 +2,7 @@ use image::Pixel;
 use anyhow::Error;
 use std::{fmt::Debug, io::Cursor};
 use ndarray::{s, Array, ArrayBase};
-use wasmcloud_provider_mlinference::inference::f32_vec_to_bytes;
+use wasmcloud_provider_mlinference::inference::f32_array_to_bytes;
 
 pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
     path: S,
@@ -36,5 +36,5 @@ pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
         channel_array /= std[c];
     }
 
-    Ok(f32_vec_to_bytes(array.as_slice().unwrap().to_vec()))
+    Ok(f32_vec_to_bytes(array.as_slice().unwrap()))
 }

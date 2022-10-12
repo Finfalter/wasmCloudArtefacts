@@ -16,7 +16,7 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
-use wasmcloud_provider_mlinference::inference::{bytes_to_f32_vec, f32_vec_to_bytes};
+use wasmcloud_provider_mlinference::inference::{bytes_to_f32_vec, f32_array_to_bytes};
 
 pub trait NdArrayTensor<S, T, D> {
     /// https://en.wikipedia.org/wiki/Softmax_function
@@ -77,7 +77,7 @@ pub async fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
         channel_array /= std[c];
     }
 
-    Ok(f32_vec_to_bytes(array.as_slice().unwrap().to_vec()).await)
+    Ok(f32_array_to_bytes(array.as_slice().unwrap()).await)
 }
 
 async fn get_environment() -> (MlInferenceSender<Provider>, Context) {
@@ -140,7 +140,7 @@ async fn onnx_identity_input_output(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
     println!("shape: {:#?}", tensor_shape);
 
-    let tensor_data = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec()).await;
+    let tensor_data = f32_array_to_bytes(input_tensor.as_slice().unwrap()).await;
     println!("input_tensor: {:#?}", input_tensor);
 
     let tensor_data_cloned = tensor_data.clone();
@@ -192,7 +192,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
     println!("shape: {:#?}", tensor_shape);
 
-    let tensor_data = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec()).await;
+    let tensor_data = f32_array_to_bytes(input_tensor.as_slice().unwrap()).await;
     println!("input_tensor: {:#?}", input_tensor);
 
     let tensor_shape_cloned = tensor_shape.clone();
@@ -216,7 +216,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
 
     assert_eq!(
         predict_result.tensor.data,
-        f32_vec_to_bytes(output_tensor.as_slice().unwrap().to_vec()),
+        f32_array_to_bytes(output_tensor.as_slice().unwrap()),
         "Output data should be input 'plus 3'"
     );
     assert_eq!(

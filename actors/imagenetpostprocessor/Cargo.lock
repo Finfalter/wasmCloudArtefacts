@@ -2588,9 +2588,9 @@ dependencies = [
 
 [[package]]
 name = "wasmbus-rpc"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25e3ab2907e44494c1fdcabad972afec0ffcdb9becc13229252cfad8f503941a"
+checksum = "84264f6ad19b3ed5802bbd4abfda11736a3b575d2a12f66d707fecec88c2efaf"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -2628,9 +2628,9 @@ dependencies = [
 
 [[package]]
 name = "wasmcloud-interface-logging"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c62623893be2faf2146ccdc253a113fd5da678eb23233002e43064d84ab7bc8"
+checksum = "d2132930f4491ac8f820bf481d7ea6e385e3184d7153d2740739e632fd347973"
 dependencies = [
  "async-trait",
  "cfg-if 1.0.0",

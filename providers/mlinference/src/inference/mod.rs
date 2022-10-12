@@ -4,7 +4,7 @@ mod tract;
 pub use self::tflite::TfLiteEngine;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-pub use tract::{bytes_to_f32_vec, f32_vec_to_bytes, TractEngine, TractSession};
+pub use tract::{bytes_to_f32_vec, f32_array_to_bytes, TractEngine, TractSession};
 use wasmcloud_interface_mlinference::{InferenceOutput, Tensor};
 
 /// Graph (model number)

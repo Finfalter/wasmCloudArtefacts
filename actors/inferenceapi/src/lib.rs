@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use wasmbus_rpc::actor::prelude::*;
 use wasmcloud_interface_httpserver::{HttpRequest, HttpResponse, HttpServer, HttpServerReceiver};
-use wasmcloud_interface_logging::debug;
+use wasmcloud_interface_logging::{debug, error, warn};
 use wasmcloud_interface_mlimagenet::{Imagenet, ImagenetSender};
 use wasmcloud_interface_mlinference::{
     InferenceInput, InferenceOutput, MlInference, MlInferenceSender, Status, Tensor,
@@ -34,7 +34,7 @@ impl HttpServer for InferenceapiActor {
         let path = &req.path[1..req.path.len()];
         let segments: Vec<&str> = path.trim_end_matches('/').split('/').collect();
 
-        debug!("Segments: {:?}", segments);
+        warn!("request {} {:?}", &req.method, &segments);
 
         match (req.method.as_ref(), segments.as_slice()) {
             ("POST", [model_name]) => {
@@ -42,7 +42,7 @@ impl HttpServer for InferenceapiActor {
 
                 // extract
                 let tensor: Tensor = deser(&req.body).map_err(|error| {
-                    log::error!("failed to deserialize the input tensor from POST body!");
+                    error!("failed to deserialize the input tensor from POST body!");
                     RpcError::Deser(format!("{}", error))
                 })?;
 
@@ -67,7 +67,7 @@ impl HttpServer for InferenceapiActor {
 
                 // extract
                 let tensor: Tensor = deser(&req.body).map_err(|error| {
-                    log::error!("failed to deserialize the input tensor from PUT body!");
+                    error!("failed to deserialize the input tensor from PUT body!");
                     RpcError::Deser(format!("{}", error))
                 })?;
 

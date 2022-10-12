@@ -1,29 +1,18 @@
 //! This actor is designed to support the following two models:
 //! * https://github.com/onnx/models/tree/main/vision/classification/mobilenet
 
+use byteorder::{LittleEndian, WriteBytesExt};
 use image::{load_from_memory, Pixel};
 use ndarray::s;
 use wasmbus_rpc::actor::prelude::*;
-use wasmcloud_interface_logging::debug;
 
-pub async fn f32_vec_to_bytes(float_array: Vec<f32>) -> RpcResult<Vec<u8>> {
-    let sum: f32 = float_array.iter().sum();
-
-    debug!(
-        "f32_vec_to_bytes() - flattened tensor contains {} elements with sum {}",
-        float_array.len(),
-        sum
-    );
-
-    let chunks: Vec<[u8; 4]> = float_array.into_iter().map(|f| f.to_le_bytes()).collect();
-    let byte_array: Vec<u8> = chunks.iter().flatten().copied().collect();
-
-    debug!(
-        "f32_vec_to_bytes() - flattened byte tensor contains {} elements",
-        byte_array.len()
-    );
-
-    Ok(byte_array)
+pub async fn f32_array_to_bytes(values: &[f32]) -> Vec<u8> {
+    let mut wtr = Vec::with_capacity(values.len() * 4);
+    for val in values.iter() {
+        // unwrap ok because buf is pre-allocated and won't error
+        wtr.write_f32::<LittleEndian>(*val).unwrap();
+    }
+    wtr
 }
 
 pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<Vec<u8>> {
@@ -56,8 +45,5 @@ pub async fn preprocess(raw_data: &[u8], height: u32, width: u32) -> RpcResult<V
         channel_array -= mean[c];
         channel_array /= std[c];
     }
-
-    let flattened_img: Vec<u8> = f32_vec_to_bytes(array.as_slice().unwrap().to_vec()).await?;
-
-    Ok(flattened_img)
+    Ok(f32_array_to_bytes(array.as_slice().unwrap()).await)
 }

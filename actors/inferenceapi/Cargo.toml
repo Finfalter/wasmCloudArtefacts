@@ -16,7 +16,7 @@ log = "0.4"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 wasmbus-rpc = "0.10"
-wasmcloud-interface-logging = "0.7"
+wasmcloud-interface-logging = { version="0.7.1", features = [ "sync_macro" ] }
 wasmcloud-interface-httpserver = "0.7"
 wasmcloud_interface_mlinference = "0.3"
 wasmcloud_interface_mlpreprocessing = { path="../../interfaces/mlpreprocessing/rust" }

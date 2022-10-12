@@ -7,9 +7,13 @@ use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
     InferenceInput, InferenceOutput, MlError, MlInference, MlInferenceReceiver,
 };
+
+//#[cfg(feature = "tflite")]
+use wasmcloud_provider_mlinference::TfLiteEngine;
+
 use wasmcloud_provider_mlinference::{
-    get_default_inference_result, load_settings, BindleLoader, Engine, Graph, GraphEncoding,
-    GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TfLiteEngine, TractEngine,
+    get_default_inference_result, load_settings, BindleLoader, Engine, Graph, 
+    GraphEncoding, GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TractEngine,
 };
 
 /// main (via provider_main) initializes the threaded tokio executor,

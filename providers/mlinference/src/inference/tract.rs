@@ -3,7 +3,7 @@ use crate::inference::{
     InferenceResult,
 };
 use async_trait::async_trait;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ndarray::Array;
 use std::{
     collections::{btree_map::Keys, BTreeMap},
@@ -321,7 +321,7 @@ impl InferenceEngine for TractEngine {
             }
         };
 
-        let bytes = f32_vec_to_bytes(tensor.as_slice().unwrap().to_vec()).await;
+        let bytes = f32_array_to_bytes(tensor.as_slice().unwrap()).await;
 
         let io = InferenceOutput {
             result: Status::Success,
@@ -361,19 +361,28 @@ pub async fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
         .collect()
 }
 
-pub async fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
-    let sum: f32 = data.iter().sum();
-    log::debug!(
-        "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",
-        data.len(),
-        sum
-    );
-    let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
-    let result: Vec<u8> = chunks.iter().flatten().copied().collect();
-
-    log::debug!(
-        "f32_vec_to_bytes() - flatten byte output tensor contains {} elements",
-        result.len()
-    );
-    result
+pub async fn f32_array_to_bytes(values: &[f32]) -> Vec<u8> {
+    let mut wtr = Vec::with_capacity(values.len() * 4);
+    for val in values.iter() {
+        // unwrap ok because buf is pre-allocated and won't error
+        wtr.write_f32::<LittleEndian>(*val).unwrap();
+    }
+    wtr
 }
+
+// pub async fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+//     let sum: f32 = data.iter().sum();
+//     log::debug!(
+//         "f32_vec_to_bytes() - flatten output tensor contains {} elements with sum {}",
+//         data.len(),
+//         sum
+//     );
+//     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
+//     let result: Vec<u8> = chunks.iter().flatten().copied().collect();
+
+//     log::debug!(
+//         "f32_vec_to_bytes() - flatten byte output tensor contains {} elements",
+//         result.len()
+//     );
+//     result
+// }

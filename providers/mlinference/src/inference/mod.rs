@@ -55,10 +55,7 @@ impl Default for Box<dyn InferenceEngine + Send + Sync> {
 /// InferenceEngine
 #[async_trait]
 pub trait InferenceEngine {
-    async fn load(
-        &self, 
-        model: &[u8], 
-    ) -> InferenceResult<Graph>;
+    async fn load(&self, model: &[u8]) -> InferenceResult<Graph>;
 
     async fn init_execution_context(
         &self,
@@ -82,10 +79,7 @@ pub trait InferenceEngine {
         index: u32,
     ) -> InferenceResult<InferenceOutput>;
 
-    async fn drop_model_state(
-        &self, 
-        graph: &Graph, 
-        gec: &GraphExecutionContext);
+    async fn drop_model_state(&self, graph: &Graph, gec: &GraphExecutionContext);
 }
 
 /// InferenceResult

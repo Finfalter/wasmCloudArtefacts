@@ -58,10 +58,7 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
 
     let mut settings = ModelSettings::default();
 
-    log::debug!(
-        "load_settings() - settings: '{:?}'",
-        &settings
-    );
+    log::debug!("load_settings() - settings: '{:?}'", &settings);
 
     // log::debug!(
     //     "load_settings() -2b------------- '{:?}'",

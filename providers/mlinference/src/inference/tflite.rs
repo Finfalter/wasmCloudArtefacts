@@ -49,8 +49,8 @@ pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
 
 impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
     pub fn with_graph(
-        graph: Interpreter<'a, BuiltinOpResolver>, 
-        encoding: GraphEncoding, 
+        graph: Interpreter<'a, BuiltinOpResolver>,
+        encoding: GraphEncoding,
         edgetpu_context: Option<edgetpu::EdgeTpuContext>,
     ) -> Self {
         Self {
@@ -67,7 +67,6 @@ impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
 impl<'a> InferenceEngine for TfLiteEngine<'a> {
     /// load
     async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
-
         let model_bytes = model.to_vec();
 
         let mut state = self.state.write().await;
@@ -164,8 +163,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         let mut edgetpu_context = None;
 
-        if matches!(target, &ExecutionTarget::Tpu) 
-        {
+        if matches!(target, &ExecutionTarget::Tpu) {
             edgetpu_context = Some(EdgeTpuContext::open_device().map_err(|_| {
                 log::error!("init_execution_context() - failed to get edge TPU context");
                 InferenceError::FailedToBuildModelFromBuffer
@@ -179,7 +177,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
             interpreter.set_num_threads(1);
         }
-        
+
         interpreter.allocate_tensors().map_err(|_| {
             log::error!("init_execution_context() - Interpreter: tensor allocation failed");
             InferenceError::TensorAllocationError
@@ -194,11 +192,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         state.executions.insert(
             gec,
-            TfLiteSession::with_graph(
-                interpreter, 
-                encoding.to_owned(), 
-                edgetpu_context,
-            )
+            TfLiteSession::with_graph(interpreter, encoding.to_owned(), edgetpu_context),
         );
 
         log::debug!("init_execution_context() - passed");

@@ -69,7 +69,6 @@ impl ModelState {
 impl InferenceEngine for TractEngine {
     /// load
     async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
-
         let model_bytes = model.to_vec();
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
@@ -91,8 +90,7 @@ impl InferenceEngine for TractEngine {
     }
 
     /// init_execution_context
-    async fn 
-    init_execution_context(
+    async fn init_execution_context(
         &self,
         graph: Graph,
         target: &ExecutionTarget,

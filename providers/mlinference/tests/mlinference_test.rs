@@ -253,7 +253,9 @@ async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("ONNX-mobilenetv27() with result {:?}", raw_result);
 
     // TODO: assert that there is no error
-    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data).await.unwrap();
+    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data)
+        .await
+        .unwrap();
 
     let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
     let mut probabilities: Vec<(usize, f32)> = output_tensor
@@ -319,7 +321,9 @@ async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("ONNX-mobilenetv27() with result {:?}", raw_result);
 
     // TODO: assert that there is no error
-    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data).await.unwrap();
+    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data)
+        .await
+        .unwrap();
 
     let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
     let mut probabilities: Vec<(usize, f32)> = output_tensor

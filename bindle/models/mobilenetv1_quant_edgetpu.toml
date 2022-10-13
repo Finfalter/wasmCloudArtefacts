@@ -1,0 +1,34 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "mobilenetv1_quant_edgetpu"
+version = "0.1.0"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+description = "model for MNIST images"
+
+[annotations]
+myname = "myvalue"
+
+[[group]]
+name = "model"
+satisfiedBy = "allOf"
+required = true
+
+[[group]]
+name = "metadata"
+satisfiedBy = "allOf"
+required = true
+
+[[parcel]]
+label.sha256 = 'e17124a57e78f51af6600a561a76cc13866ab9d039378b3dc83507941957f4b0'
+label.mediaType = 'application/octet-stream'
+label.name = 'mobilenetv1_quant_edgetpu.tflite'
+label.size = 4526648
+conditions.memberOf = ["model"]
+
+[[parcel]]
+label.sha256 = '96f8060b2d1e2e20c72b87b1dbcf723c149d54f98e3a03d20bf88f312a874fa9'
+label.mediaType = 'application/json'
+label.name = 'mobilenetv1_quant_edgetpu.json'
+label.size = 202
+conditions.memberOf = ["metadata"]

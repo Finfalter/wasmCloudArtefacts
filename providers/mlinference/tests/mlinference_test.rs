@@ -16,7 +16,7 @@ use wasmcloud_test_util::{
 #[allow(unused_imports)]
 use wasmcloud_test_util::{run_selected, run_selected_spawn};
 
-use wasmcloud_provider_mlinference::inference::{bytes_to_f32_vec, f32_vec_to_bytes};
+use wasmcloud_provider_mlinference::inference::{bytes_to_f32_vec, f32_array_to_bytes};
 
 pub trait NdArrayTensor<S, T, D> {
     /// https://en.wikipedia.org/wiki/Softmax_function
@@ -45,7 +45,7 @@ where
     }
 }
 
-pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
+pub async fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
     path: S,
     height: u32,
     width: u32,
@@ -77,7 +77,7 @@ pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
         channel_array /= std[c];
     }
 
-    Ok(f32_vec_to_bytes(array.as_slice().unwrap().to_vec()))
+    Ok(f32_array_to_bytes(array.as_slice().unwrap()).await)
 }
 
 async fn get_environment() -> (MlInferenceSender<Provider>, Context) {
@@ -140,7 +140,7 @@ async fn onnx_identity_input_output(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
     println!("shape: {:#?}", tensor_shape);
 
-    let tensor_data = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+    let tensor_data = f32_array_to_bytes(input_tensor.as_slice().unwrap()).await;
     println!("input_tensor: {:#?}", input_tensor);
 
     let tensor_data_cloned = tensor_data.clone();
@@ -192,7 +192,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
     let tensor_shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
     println!("shape: {:#?}", tensor_shape);
 
-    let tensor_data = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+    let tensor_data = f32_array_to_bytes(input_tensor.as_slice().unwrap()).await;
     println!("input_tensor: {:#?}", input_tensor);
 
     let tensor_shape_cloned = tensor_shape.clone();
@@ -216,7 +216,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
 
     assert_eq!(
         predict_result.tensor.data,
-        f32_vec_to_bytes(output_tensor.as_slice().unwrap().to_vec()),
+        f32_array_to_bytes(output_tensor.as_slice().unwrap()),
         "Output data should be input 'plus 3'"
     );
     assert_eq!(
@@ -231,7 +231,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
 async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
-    let image = image_to_tensor(IMG_PATH, 224, 224).unwrap();
+    let image = image_to_tensor(IMG_PATH, 224, 224).await.unwrap();
 
     //println!("input_tensor: {:#?}", input_tensor);
 
@@ -253,7 +253,9 @@ async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("ONNX-mobilenetv27() with result {:?}", raw_result);
 
     // TODO: assert that there is no error
-    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data).unwrap();
+    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data)
+        .await
+        .unwrap();
 
     let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
     let mut probabilities: Vec<(usize, f32)> = output_tensor
@@ -297,7 +299,7 @@ async fn onnx_mobilenetv2_7(_opt: &TestOptions) -> RpcResult<()> {
 async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
     let env = get_environment().await;
 
-    let image = image_to_tensor(IMG_PATH, 224, 224).unwrap();
+    let image = image_to_tensor(IMG_PATH, 224, 224).await.unwrap();
 
     //println!("input_tensor: {:#?}", input_tensor);
 
@@ -319,7 +321,9 @@ async fn onnx_squeezenetv1_1_7(_opt: &TestOptions) -> RpcResult<()> {
     //println!("ONNX-mobilenetv27() with result {:?}", raw_result);
 
     // TODO: assert that there is no error
-    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data).unwrap();
+    let raw_result_f32 = bytes_to_f32_vec(raw_result_bytes.tensor.data)
+        .await
+        .unwrap();
 
     let output_tensor = Array::from_shape_vec((1, 1000, 1, 1), raw_result_f32).unwrap();
     let mut probabilities: Vec<(usize, f32)> = output_tensor

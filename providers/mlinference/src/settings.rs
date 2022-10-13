@@ -44,7 +44,7 @@ impl Models {
 }
 
 pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, RpcError> {
-    log::debug!("load_settings() -1--------------");
+    log::debug!("load_settings() - entering");
 
     // Allow keys to be UPPERCASE, as an accommodation
     // for the lost souls who prefer ugly all-caps variable names.
@@ -58,16 +58,12 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
 
     let mut settings = ModelSettings::default();
 
-    log::debug!(
-        "load_settings() -1b------------- settings: '{:?}'",
-        &settings
-    );
+    log::debug!("load_settings() - settings: '{:?}'", &settings);
 
-    log::debug!("load_settings() -2--------------");
-    log::debug!(
-        "load_settings() -2b------------- '{:?}'",
-        values.get("config_b64")
-    );
+    // log::debug!(
+    //     "load_settings() -2b------------- '{:?}'",
+    //     values.get("config_b64")
+    // );
 
     if let Some(cj) = values.get("config_b64") {
         settings = serde_json::from_slice(&base64::decode(cj).map_err(|e| {
@@ -83,11 +79,10 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
         })?
     }
 
-    log::debug!("load_settings() -3--------------");
-    log::debug!(
-        "load_settings() -3b------------- settings: '{:?}'",
-        &settings
-    );
+    // log::debug!(
+    //     "load_settings() -3b------------- settings: '{:?}'",
+    //     &settings
+    // );
 
     if let Some(cj) = values.get("config_json") {
         settings = serde_json::from_str(cj.as_str()).map_err(|e| {
@@ -99,8 +94,6 @@ pub fn load_settings(values: &HashMap<String, String>) -> Result<ModelSettings, 
     if let Some(lazy_load) = values.get("lazy_load") {
         settings.lazy_load = FromStr::from_str(lazy_load).ok();
     }
-
-    log::debug!("load_settings() -4--------------");
 
     if settings.models.is_empty() {
         log::error!("link params values are missing 'uri'");

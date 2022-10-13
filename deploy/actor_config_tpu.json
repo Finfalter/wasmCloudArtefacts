@@ -1,0 +1,10 @@
+{
+    "models": {
+      "zoo": {
+        "mobilenetv1tpu": "mobilenetv1_quant_edgetpu/0.1.0"
+      }
+    },
+    "values": {
+      "lazy_load": false
+    }
+  }

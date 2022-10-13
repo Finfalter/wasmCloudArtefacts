@@ -1,0 +1,9 @@
+{
+	"model_name":"mobilenetv1_uint8_quant",
+	"graph_encoding":"tf_lite",
+	"execution_target":"cpu",
+	"tensor_type":"U8",
+	"tensor_dimensions_in":[1, 28, 28, 1],
+	"tensor_dimensions_out":[1, 10]
+}
+

@@ -57,11 +57,10 @@ impl BindleLoader {
             BindleError::NoBindleUrlDefinedError
         })?;
 
-        let bindle_client =
-            Client::new(&url, NoToken).map_err(|_| {
-                log::error!("Bindle Url invalid!");
-                BindleError::BindleUrlInvalidError
-            })?;
+        let bindle_client = Client::new(&url, NoToken).map_err(|_| {
+            log::error!("Bindle Url invalid!");
+            BindleError::BindleUrlInvalidError
+        })?;
 
         Ok(bindle_client)
     }
@@ -71,29 +70,23 @@ impl BindleLoader {
         bindle_client: &Client<NoToken>,
         bindle_url: &str,
     ) -> BindleResult<(ModelMetadata, Vec<u8>)> {
-        let invoice = bindle_client
-            .get_invoice(bindle_url)
-            .await
-            .map_err(|_| {
-                log::error!("Bindle Invoice not found!");
-                BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
-            })?;
+        let invoice = bindle_client.get_invoice(bindle_url).await.map_err(|_| {
+            log::error!("Bindle Invoice not found!");
+            BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
+        })?;
 
-        let parcels = invoice
-            .parcel
-            .ok_or_else(|| {
-                log::error!("Bindle Parcel not found!");
-                BindleError::BindleParcelNotFoundError(bindle_url.to_string())
-            })?;
+        let parcels = invoice.parcel.ok_or_else(|| {
+            log::error!("Bindle Parcel not found!");
+            BindleError::BindleParcelNotFoundError(bindle_url.to_string())
+        })?;
 
-        let model_parcel = BindleLoader::get_first_member_of(&parcels, "model")
-            .map_err(|_| {
-                log::error!("No Bindle Parcel of group 'model'!");
-                BindleError::BindleNoParcelOfGroupModelError
-            })?;
+        let model_parcel = BindleLoader::get_first_member_of(&parcels, "model").map_err(|_| {
+            log::error!("No Bindle Parcel of group 'model'!");
+            BindleError::BindleNoParcelOfGroupModelError
+        })?;
 
-        let metadata_parcel = BindleLoader::get_first_member_of(&parcels, "metadata")
-            .map_err(|_| {
+        let metadata_parcel =
+            BindleLoader::get_first_member_of(&parcels, "metadata").map_err(|_| {
                 log::error!("No Bindle Parcel of group 'metadata'!");
                 BindleError::BindleNoParcelOfGroupMetadataError
             })?;
@@ -135,7 +128,6 @@ impl BindleLoader {
     }
 
     /// get first member of
-    //fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> BindleResult<&bindle::Parcel> {
     fn get_first_member_of<'a>(
         parcels: &'a [bindle::Parcel],
         group: &'a str,

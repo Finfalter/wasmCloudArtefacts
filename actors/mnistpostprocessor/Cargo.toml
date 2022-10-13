@@ -1,0 +1,23 @@
+[package]
+name = "mnistpostprocessor"
+version = "0.1.0"
+authors = [ "" ]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "mnistpostprocessor"
+
+[dependencies]
+futures = "0.3"
+byteorder = "1"
+form_urlencoded = "1.0"
+wasmbus-rpc = "0.10"
+# wasmcloud-interface-httpserver = "0.7"
+wasmcloud_interface_mlinference = "0.3"
+wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/rust" }
+
+[profile.release]
+# Optimize for small code size
+lto = true
+opt-level = "s"

@@ -9,6 +9,7 @@ cat <<_SHOW_HELP
 
   Basics:
    $0 all                          - run everything
+   $0 restart                      - re-run everything
    $0 wipe                         - stop everything and erase all secrets
 
   Bindle:
@@ -26,6 +27,9 @@ _SHOW_HELP
 ## ---------------------------------------------------------------
 ## START CONFIGURATION
 ## ---------------------------------------------------------------
+
+check=$(printf '\342\234\224\n' | iconv -f UTF-8)
+is_restart=false
 
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
 source $_DIR/env
@@ -49,24 +53,29 @@ BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 ##
 #   WASMCLOUD HOST
 ##
-
-# (defined in env)
+WASMCLOUD_PORT=4000
+# (further definitions in env)
 
 ##
 #   CAPABILITY PROVIDERS
 ##
 
 # oci registry - as used by wash
-REG_SERVER=127.0.0.1:5000
+REG_SERVER=${HOST_DEVICE_IP}:5000
 # registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
-REG_SERVER_FROM_HOST=127.0.0.1:5000
+#REG_SERVER_FROM_HOST=127.0.0.1:5000
+REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
 #HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
 #HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
-HTTPSERVER_REF=127.0.0.1:5000/httpserver:0.15.1
+HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
 HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
+<<<<<<< HEAD
 MLINFERENCE_REF=${REG_SERVER}/mlinference:0.2.1
+=======
+MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.1
+>>>>>>> coral
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
@@ -74,7 +83,7 @@ INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
 # http configuration file. use https_config.json to enable TLS
 HTTP_CONFIG=http_config.json
 
-MODEL_CONFIG=actor_config.json
+MODEL_CONFIG=actor_config_wo_tpu.json
 
 # command to base64 encode stdin to stdout
 BASE64_ENC=base64
@@ -99,6 +108,7 @@ host_cmd() {
 
 # stop docker and wipe all data (database, nats cache, host provider/actors, etc.)
 wipe_all() {
+    is_restart=$1
 
     cat >$SECRETS <<__WIPE
 WASMCLOUD_CLUSTER_SEED=
@@ -115,10 +125,16 @@ __WIPE
 
     ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
     ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
+    
     killall --quiet -KILL wasmcloud_httpserver_default || true
     killall --quiet -KILL wasmcloud_mlinference_default || true
 
-    wash drain all
+    if [ ! "$is_restart" = true ] ; then
+        echo 'going to shutdown .. '
+        wash drain all
+    else
+        echo 'detected a restart .. not draining resources'
+    fi
 
     # clear bindle cache
     rm -rf ~/.cache/bindle ~/Library/Caches/bindle
@@ -145,7 +161,7 @@ __SECRETS
 }
 
 start_bindle() {
-    echo "\n[bindle-server startup]"
+    printf "\n[bindle-server startup]\n"
 
     if [ -z "$BINDLE_SERVER" ] || [ ! -x $BINDLE_SERVER ]; then
       echo "You must define BINDLE_HOME or BINDLE_SERVER"
@@ -163,7 +179,7 @@ start_bindle() {
 }
 
 stop_bindle() {
-    echo "\n[bindle-server shutdown]"
+    printf "\n[bindle-server shutdown]\n"
 
     eval '"$BINDLE_SHUTDOWN_SCRIPT"'
 }
@@ -171,7 +187,7 @@ stop_bindle() {
 create_bindle() {   
     start_bindle
 
-    echo "\n[bindle creation]"
+    printf "\n[bindle creation]\n"
 
     if [ -z "$BINDLE" ] || [ ! -x $BINDLE ]; then
       echo "You must define BINDLE_HOME or BINDLE"
@@ -187,12 +203,19 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
+<<<<<<< HEAD
     echo
     echo "\npushing capability provider '${MLINFERENCE_REF}' to your local registry .."
+=======
+    echo "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
+>>>>>>> coral
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
     wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
+
+    echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
+    wash reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
 }
 
 # start docker services
@@ -217,14 +240,34 @@ start_services() {
     host_cmd start
 }
 
-start_actors() {
+# help preparing remote device
+# idempotent
+prepare_remote_device() {
 
+    printf "\nTARGET_DEVICE_IP is detected to be remote --> you try to deploy the runtime on a remote node\n\n"
+    printf "In order to prepare well you certainly\n"
+    printf "$check loaded ${_DIR}/../iot/configure_edge.sh to the remote node\n"
+    printf "$check loaded ${_DIR}/../iot/restart_edge.sh to the remote node\n"
+    printf "$check 'source ./configure_edge.sh' on the remote node\n"
+    printf "$check started NATS ('nats-server --jetstream') on the remote node\n"
+    printf "$check started wasmCloud runtime ('restart_edge.sh') on the remote node\n"
+    printf "$check 'set HOST_DEVICE_IP in env.sh\n"
+    printf "$check 'set TARGET_DEVICE_IP in env.sh\n\n"
+
+    read  -n 1 -p "press any button to start deployment"
+}
+
+start_actors() {
     echo "starting actors .."
     _here=$PWD
     cd ${_DIR}/../actors
     for i in */; do
         if [ -f $i/Makefile ]; then
-            make -C $i build push start
+            if [ "$is_restart" = true ] ; then
+                make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i start
+            else
+                make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
+            fi
         fi
     done
     cd $_here
@@ -235,15 +278,18 @@ start_actors() {
 start_providers() {
     local _host_id=$(host_id)
 
+    if [ "$is_restart" != true ] ; then
+        # make sure inference provider is built
+        make -C ${_DIR}/../providers/mlinference all
+    fi
 
+    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
+	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+
+    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
     #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
-    cd ../../../capability-providers/httpserver-rs && make push && make start
-
-    # make sure inference provider is built
-    #make -C ${_DIR}/../providers/mlinference all
-
-    echo "starting capability provider 'mlinference' from your local registry .."
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    #cd ../../../capability-providers/httpserver-rs && make push && make start
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
 }
 
 # base-64 encode file into a string
@@ -290,7 +336,23 @@ check_files() {
 	jq < $HTTP_CONFIG >/dev/null
 }
 
+wait_for_wasmcloud() {
+    # This might be overkill and could be replaced with a sleep
+    # otherwise 'nc' would have to be on the required dependencies list
+    until nc localhost $WASMCLOUD_PORT -w1 -z ; do
+        echo Waiting for wasmCloud to start ...
+        sleep 1
+    done
+}
+
 run_all() {
+    start=$(date +%s)
+
+    if [ "$is_restart" = true ]; then
+        echo "going to restart the application .."
+    else
+        echo "running a full startup cycle .."
+    fi
 
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
@@ -300,27 +362,57 @@ run_all() {
     fi
     check_files
 
-    # start all the containers
-    start_services
+    # start all the containers in case the target is localhost
+    if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
+        # help preparing to ramp up the remote device
+        prepare_remote_device
+
+        # in case you do not run a local registry, switch it on
+        docker container start registry
+    else 
+        # in case you still run a local registry, switch it off
+        docker container stop registry
+
+        echo "starting runtime, nats and registry on host"
+        start_services
+    fi
 
     # start host console to view logs
     if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
         $TERMINAL -e ./run.sh host attach &
     fi
 
-    # push capability provider to local registry
-    push_capability_provider
+    wait_for_wasmcloud
+
+    if [ "$is_restart" != true ] ; then
+        # push capability provider to local registry
+        push_capability_provider
+    fi
 
     # build, push, and start all actors
-    start_actors
+    start_actors is_restart
 
     # start capability providers: httpserver and sqldb 
-    start_providers
+    start_providers is_restart
 
     # link providers with actors
     link_providers
 
     show_inventory
+
+    end=$(date +%s)
+    execution_time=$(( $end - $start ))
+    echo "Starting up this application took $execution_time seconds."
+}
+
+run_restart() {    
+    is_restart=true
+
+    wipe_all $is_restart
+
+    run_all $is_restart
+
+    is_restart=false
 }
 
 case $1 in 
@@ -337,8 +429,8 @@ case $1 in
     link-providers ) link_providers ;;
     host ) shift; host_cmd $@ ;;
     run-all | all ) shift; run_all $@ ;;
+    run-restart | restart) shift; run_restart $@ ;;
 
     * ) show_help && exit 1 ;;
 
 esac
-

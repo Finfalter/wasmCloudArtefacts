@@ -1,0 +1,12 @@
+{
+    "models": {
+      "zoo": {
+        "mobilenetv1tpu": "mobilenetv1_quant_edgetpu/0.1.0",
+        "mnistv1": "mobilenetv1_uint8_quant/0.1.0",
+        "mnistv2": "mobilenetv2_uint8_quant/0.1.0"
+      }
+    },
+    "values": {
+      "lazy_load": false
+    }
+  }

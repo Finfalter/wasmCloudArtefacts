@@ -1,6 +1,6 @@
 [package]
 name = "imagenetpostprocessor"
-version = "0.1.0"
+version = "0.2.0"
 authors = [ "" ]
 edition = "2021"
 
@@ -14,9 +14,9 @@ byteorder = "1.4"
 futures = "0.3"
 form_urlencoded = "1.0"
 ndarray = "0.15"
-wasmbus-rpc = "0.8.2"
-wasmcloud-interface-logging = "0.5.0"
-wasmcloud_interface_mlinference = { git = "https://github.com/wasmCloud/interfaces" }
+wasmbus-rpc = "0.10"
+wasmcloud-interface-logging = "0.7"
+wasmcloud_interface_mlinference = "0.3"
 wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/rust" }
 
 [profile.release]

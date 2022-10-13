@@ -1,7 +1,7 @@
 
 # MlInference
 
-> **_NOTE:_**  additional documentation [here](https://finfalter.github.io/wasmCloudArtefacts/)
+> __NOTE:__  additional documentation [here](https://finfalter.github.io/wasmCloudArtefacts/)
 
 This repository provides a [wasmCloud](https://wasmcloud.dev/)
 capability provider and actors to perform __inference__
@@ -49,11 +49,7 @@ Be sure to set BINDLE and BINDLE_SERVER in `env` to the paths to the bindle cli
 and bindle server executables, respectively. If they are in your $PATH,
 you can just set these to `bindle` and `bindle-server`. If you built
 bindle from git, use the 0.7.1 tag, run `cargo build`, and set
-<<<<<<< HEAD
-BINDLE_HOME to the path to the git repo. 
-=======
 BINDLE_HOME to the path to the git repo.
->>>>>>> coral
 
 ## Running
 

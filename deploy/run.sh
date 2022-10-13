@@ -71,11 +71,7 @@ REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
 HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
-<<<<<<< HEAD
-MLINFERENCE_REF=${REG_SERVER}/mlinference:0.2.1
-=======
 MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.1
->>>>>>> coral
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
@@ -203,12 +199,7 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
-<<<<<<< HEAD
-    echo
-    echo "\npushing capability provider '${MLINFERENCE_REF}' to your local registry .."
-=======
     echo "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
->>>>>>> coral
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 

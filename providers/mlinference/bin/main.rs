@@ -8,13 +8,14 @@ pub(crate) use wasmcloud_interface_mlinference::{
     InferenceInput, InferenceOutput, MlError, MlInference, MlInferenceReceiver,
 };
 
-//#[cfg(feature = "tflite")]
+#[cfg(any(feature = "tflite", feature = "edgetpu"))]
 use wasmcloud_provider_mlinference::TfLiteEngine;
 
 use wasmcloud_provider_mlinference::{
     get_default_inference_result, load_settings, BindleLoader, Engine, Graph, GraphEncoding,
     GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TractEngine,
 };
+
 
 /// main (via provider_main) initializes the threaded tokio executor,
 /// listens to lattice rpcs, handles actor links,
@@ -320,6 +321,8 @@ impl MlInferenceProvider {
                     }
                 }
             }
+
+            #[cfg(any(feature = "tflite", feature = "edgetpu"))]
             GraphEncoding::TfLite => {
                 match engines_lock.get(&InferenceFramework::TfLite) {
                     Some(e) => {

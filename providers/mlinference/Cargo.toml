@@ -4,9 +4,10 @@ version = "0.3.1"
 edition = "2021"
 resolver = "2"
 
-# [features]
-# default = []
-# tflite = [ "dep:tflite", "edgetpu" ]
+[features]
+default = []
+tflite = [ "dep:tflite"]
+edgetpu = ["tflite", "dep:edgetpu"]
 
 [dependencies]
 async-trait = "0.1"
@@ -28,12 +29,12 @@ tract-onnx = { version = "0.16.1" }
 tract-tensorflow = "0.16.1"
 wasmbus-rpc = "0.10"
 wasmcloud_interface_mlinference = "0.3"
-edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c" }
-tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15" }
+#edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c" }
+#tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15" }
 
 # optional features
-#edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c", optional=true }
-#tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15", optional=true }
+edgetpu = { git = "https://github.com/Finfalter/edgetpu-rs", rev = "d86f59c", optional=true }
+tflite = { git = "https://github.com/Finfalter/tflite-rs", rev = "5c11a15", optional=true }
 
 # test dependencies
 [dev-dependencies]

@@ -1,6 +1,8 @@
+#[cfg(feature = "tflite")]
 mod tflite;
 mod tract;
 
+#[cfg(any(feature = "tflite", feature = "edgetpu"))]
 pub use self::tflite::TfLiteEngine;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

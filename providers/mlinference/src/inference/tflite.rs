@@ -3,13 +3,12 @@ use crate::inference::{
     InferenceResult,
 };
 use async_trait::async_trait;
+#[cfg(feature = "edgetpu")]
 use edgetpu::EdgeTpuContext;
+#[cfg(any(feature = "tflite", feature = "edgetpu"))]
+use tflite::{op_resolver::OpResolver, ops::builtin::BuiltinOpResolver, Interpreter, FlatBufferModel, InterpreterBuilder};
 use std::collections::{btree_map::Keys, BTreeMap};
 use std::sync::Arc;
-use tflite::op_resolver::OpResolver;
-use tflite::ops::builtin::BuiltinOpResolver;
-use tflite::Interpreter;
-use tflite::{FlatBufferModel, InterpreterBuilder};
 use tokio::sync::RwLock;
 use wasmcloud_interface_mlinference::{
     InferenceOutput, Status, Tensor, ValueType, TENSOR_FLAG_ROW_MAJOR,
@@ -44,6 +43,7 @@ pub struct TfLiteSession<'a, BuiltinOpResolver: OpResolver> {
     pub encoding: GraphEncoding,
     pub input_tensors: usize,
     pub output_tensors: Option<Vec<Tensor>>,
+    #[cfg(feature = "edgetpu")]
     pub edgetpu_context: Option<edgetpu::EdgeTpuContext>,
 }
 
@@ -51,11 +51,13 @@ impl<'a> TfLiteSession<'a, BuiltinOpResolver> {
     pub fn with_graph(
         graph: Interpreter<'a, BuiltinOpResolver>,
         encoding: GraphEncoding,
+        #[cfg(feature = "edgetpu")]
         edgetpu_context: Option<edgetpu::EdgeTpuContext>,
     ) -> Self {
         Self {
             graph,
             encoding,
+            #[cfg(feature = "edgetpu")]
             edgetpu_context,
             input_tensors: 0,
             output_tensors: None,
@@ -107,6 +109,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             encoding
         );
 
+        #[cfg(feature = "edgetpu")]
         if !matches!(target, &ExecutionTarget::Tpu) && !matches!(target, &ExecutionTarget::Cpu) {
             log::error!(
                 "TfLiteEngine does not support execution target '{:?}'",
@@ -147,6 +150,7 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         let resolver = BuiltinOpResolver::default();
 
+        #[cfg(feature = "edgetpu")]
         if matches!(target, &ExecutionTarget::Tpu) {
             resolver.add_custom(edgetpu::custom_op(), edgetpu::register_custom_op());
         }
@@ -161,8 +165,10 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
             InferenceError::InterpreterBuildError
         })?;
 
-        let mut edgetpu_context = None;
+        #[cfg(feature = "edgetpu")]        
+        let mut edgetpu_context: Option<edgetpu::EdgeTpuContext> = None;
 
+        #[cfg(feature = "edgetpu")]
         if matches!(target, &ExecutionTarget::Tpu) {
             edgetpu_context = Some(EdgeTpuContext::open_device().map_err(|_| {
                 log::error!("init_execution_context() - failed to get edge TPU context");
@@ -192,7 +198,12 @@ impl<'a> InferenceEngine for TfLiteEngine<'a> {
 
         state.executions.insert(
             gec,
-            TfLiteSession::with_graph(interpreter, encoding.to_owned(), edgetpu_context),
+            TfLiteSession::with_graph(
+                interpreter, 
+                encoding.to_owned(), 
+                #[cfg(feature = "edgetpu")]                
+                edgetpu_context
+            ),
         );
 
         log::debug!("init_execution_context() - passed");

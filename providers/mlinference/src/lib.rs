@@ -7,9 +7,13 @@ mod bindle_loader;
 pub use bindle_loader::{BindleLoader, ModelMetadata};
 
 pub mod inference;
+
+#[cfg(any(feature = "tflite", feature = "edgetpu"))]
+pub use inference::TfLiteEngine;
+
 pub use inference::{
     bytes_to_f32_vec, f32_array_to_bytes, ExecutionTarget, Graph, GraphEncoding,
-    GraphExecutionContext, InferenceEngine, TfLiteEngine, TractEngine,
+    GraphExecutionContext, InferenceEngine, TractEngine,
 };
 
 mod settings;

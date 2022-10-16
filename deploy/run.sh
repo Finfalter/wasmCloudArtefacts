@@ -66,10 +66,16 @@ REG_SERVER=${HOST_DEVICE_IP}:5000
 #REG_SERVER_FROM_HOST=127.0.0.1:5000
 REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
-#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
+# (online) alternative
+#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.16.0
 #HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
-HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
+
+HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.16.3
 HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
+
+# below is an (offline) alternative, advantageous for demos with no wifi
+#HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.16.0
+#HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
 MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.1
 
@@ -199,14 +205,15 @@ host_id() {
 
 # push capability provider
 push_capability_provider() {
-    echo "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
+    echo -e "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
     wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
 
-    echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
+    echo -e "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
     wash reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
+    #wash reg push $HTTPSERVER_REF ./httpserver.par.gz --insecure
 }
 
 # start docker services
@@ -274,13 +281,13 @@ start_providers() {
         make -C ${_DIR}/../providers/mlinference all
     fi
 
-    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    echo -e "\nstarting capability provider '${MLINFERENCE_REF}' from registry .."
+	wash ctl start provider $MLINFERENCE_REF --link-name mlinference --host-id $_host_id --timeout-ms 32000
 
-    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
+    echo -e "\nstarting capability provider '${HTTPSERVER_REF}' from registry .."
     #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
     #cd ../../../capability-providers/httpserver-rs && make push && make start
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    wash ctl start provider $HTTPSERVER_REF --link-name httpserver --host-id $_host_id --timeout-ms 50000
 }
 
 # base-64 encode file into a string
@@ -362,7 +369,7 @@ run_all() {
         docker container start registry
     else 
         # in case you still run a local registry, switch it off
-        docker container stop registry
+        #docker container stop registry
 
         echo "starting runtime, nats and registry on host"
         start_services
@@ -381,7 +388,7 @@ run_all() {
     fi
 
     # build, push, and start all actors
-    start_actors is_restart
+    #start_actors is_restart
 
     # start capability providers: httpserver and sqldb 
     start_providers is_restart

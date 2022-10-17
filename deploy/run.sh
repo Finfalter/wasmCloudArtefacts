@@ -235,7 +235,7 @@ start_services() {
 
     # start wasmCloud host in background
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    host_cmd start
+    host_cmd start &
 }
 
 # help preparing remote device
@@ -388,7 +388,7 @@ run_all() {
     fi
 
     # build, push, and start all actors
-    #start_actors is_restart
+    start_actors is_restart
 
     # start capability providers: httpserver and sqldb 
     start_providers is_restart

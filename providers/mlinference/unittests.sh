@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# start bindle server!
+
+# start NATs!
+
+
 ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs kill
 ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs kill
 

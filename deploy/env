@@ -59,7 +59,7 @@ if [ -z "$BINDLE_SERVER" ] && [ -n "$BINDLE_HOME" ]; then
 fi
 
 # installation directory of wasmcloud host
-export WASMCLOUD_HOST_HOME=$HOME/dev/wasmcloud/wasmCloudHost
+export WASMCLOUD_HOST_HOME=$HOME/dev/wasmcloud/wasmCloudHost_57-4
 echo "WASMCLOUD_HOST_HOME is set to '${WASMCLOUD_HOST_HOME}'"
 
 echo 

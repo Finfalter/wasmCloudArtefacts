@@ -216,7 +216,7 @@ async fn tensorflow_plus3(_opt: &TestOptions) -> RpcResult<()> {
 
     assert_eq!(
         predict_result.tensor.data,
-        f32_array_to_bytes(output_tensor.as_slice().unwrap()),
+        f32_array_to_bytes(output_tensor.as_slice().unwrap()).await,
         "Output data should be input 'plus 3'"
     );
     assert_eq!(

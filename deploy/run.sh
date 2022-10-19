@@ -125,6 +125,8 @@ __WIPE
     echo -n "going to stop wasmCloud host .."
     host_cmd stop || true
 
+    sleep 5
+
     ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
     ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
     
@@ -235,7 +237,8 @@ start_services() {
 
     # start wasmCloud host in background
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    host_cmd start &
+    #host_cmd start &
+    host_cmd daemon
 }
 
 # help preparing remote device
@@ -282,12 +285,12 @@ start_providers() {
     fi
 
     echo -e "\nstarting capability provider '${MLINFERENCE_REF}' from registry .."
-	wash ctl start provider $MLINFERENCE_REF --link-name mlinference --host-id $_host_id --timeout-ms 32000
+	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
 
     echo -e "\nstarting capability provider '${HTTPSERVER_REF}' from registry .."
     #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
     #cd ../../../capability-providers/httpserver-rs && make push && make start
-    wash ctl start provider $HTTPSERVER_REF --link-name httpserver --host-id $_host_id --timeout-ms 50000
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 50000
 }
 
 # base-64 encode file into a string
@@ -304,7 +307,7 @@ link_providers() {
 
     # link inferenceapi actor to http server
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    wash ctl link put $_actor_id $HTTPSERVER_ID     \
+    wash ctl link put $_actor_id $HTTPSERVER_ID --link-name default \
         wasmcloud:httpserver config_b64=$(b64_encode_file $HTTP_CONFIG )
 
     # use locally-generated id, since mlinference provider isn't published yet
@@ -312,7 +315,7 @@ link_providers() {
 
     # link inferenceapi actor to mlinference provider
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    wash ctl link put $_actor_id $MLINFERENCE_ID     \
+    wash ctl link put $_actor_id $MLINFERENCE_ID --link-name default  \
         wasmcloud:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
 }
 

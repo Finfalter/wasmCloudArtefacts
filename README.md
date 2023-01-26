@@ -3,6 +3,9 @@
 
 > __NOTE:__  additional documentation [here](https://finfalter.github.io/wasmCloudArtefacts/)
 
+> **Warning**
+> Note that this repository is not actively maintained anymore. The functionality around the wasmcloud based inference server has moved to [wamli](https://github.com/wamli).
+
 This repository provides a [wasmCloud](https://wasmcloud.dev/)
 capability provider and actors to perform __inference__
 using machine learning models for ONNX and Tensorflow.
